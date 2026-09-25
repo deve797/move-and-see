@@ -1,0 +1,4 @@
+<view class="motion-art" aria-hidden="true">
+  <view wx:if="{{!ready}}" class="fallback"><slot /></view>
+  <canvas type="2d" id="motion" class="motion-canvas {{ready ? 'is-ready' : ''}}" />
+</view>

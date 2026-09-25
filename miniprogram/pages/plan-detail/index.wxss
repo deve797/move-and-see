@@ -1,0 +1,7 @@
+.detail-page { min-height: 100vh; padding: 12px 48rpx 32px; }
+.detail-content { margin-top: 54px; }
+.detail-title { font-size: 72rpx; font-weight: 700; line-height: 1.4; }
+.detail-date { margin-top: 18px; color: #62675e; font-size: 15px; line-height: 1.8; }
+.detail-note { margin-top: 32px; font-size: 17px; line-height: 1.8; }
+.detail-hint { margin-top: 12px; color: #71746f; font-size: 14px; line-height: 1.8; }
+.detail-page .detail-back { width: 100%; margin-top: 40px; min-height: 48px; border-radius: 24px; font-size: 17px; }

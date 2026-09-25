@@ -1,0 +1,4 @@
+:host { display: block; width: 100%; height: 100%; }
+.motion-art, .fallback { position: relative; width: 100%; height: 100%; }
+.motion-canvas { position: absolute; inset: 0; width: 100%; height: 100%; visibility: hidden; pointer-events: none; }
+.is-ready { visibility: visible; }

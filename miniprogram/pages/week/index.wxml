@@ -1,0 +1,24 @@
+<view class="week-page">
+  <view class="week-header">
+    <view class="brand serif">向前动</view>
+    <picker mode="date" value="{{selectedDate}}" bindchange="selectWeek">
+      <view class="calendar-button" role="button" aria-label="选择日期，查看所在周">
+        <view class="calendar-icon" aria-hidden="true"><view class="calendar-binding"></view><view class="calendar-dot"></view></view>
+      </view>
+    </picker>
+  </view>
+  <view class="week-intro">
+    <view class="week-title serif" role="heading" aria-level="1">{{title}}</view>
+    <view class="week-description">给喜欢的运动，留几个小空档。</view>
+    <view class="week-range">{{range}}</view>
+  </view>
+  <view class="week-list">
+    <navigator wx:for="{{days}}" wx:key="id" class="day-row" url="/pages/plan-detail/index?day={{item.id}}&date={{item.date}}" hover-class="day-pressed" aria-label="{{item.weekday}}，{{item.shortDate}}，{{item.name}}，{{item.duration}}，查看示例详情">
+      <view class="day-date"><text class="weekday">{{item.weekday}}</text><text class="date-number">{{item.shortDate}}</text></view>
+      <view class="status-slot" aria-hidden="true"><view class="status-mark {{item.tone}}"></view></view>
+      <view class="activity"><text class="activity-name {{item.tone === 'rest' ? 'rest-name' : ''}}">{{item.name}}</text><text wx:if="{{item.duration}}" class="activity-duration">{{item.duration}}</text></view>
+      <view wx:if="{{!artFailed}}" class="day-art" aria-hidden="true"><image class="art-sheet" src="/assets/week-illustrations.png" style="left: {{-item.col * 100}}%; top: {{-item.row * 100}}%;" mode="scaleToFill" binderror="onArtError" /></view>
+    </navigator>
+  </view>
+  <view class="demo-note">界面示例 · 点选一天查看 · 暂不保存计划</view>
+</view>

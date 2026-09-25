@@ -1,9 +1,33 @@
-<view class="placeholder">
-  <view class="brand serif">向前动</view>
-  <view class="placeholder-content">
-    <view class="placeholder-title serif" role="heading" aria-level="1">今天</view>
-    <view class="placeholder-note">今日安排将在这里展示。</view>
-    <view class="preview-label">页面占位 · 本轮仅演示首页与跳转</view>
-    <button class="back-button primary-button" hover-class="button-pressed" bindtap="goHome">返回首页</button>
+<view class="today-page">
+  <view class="today-header">
+    <view class="brand serif">向前动</view>
+    <navigator class="calendar-button week-entry" url="/pages/week/index" hover-class="calendar-pressed" aria-label="查看周计划">
+      <view class="calendar-icon" aria-hidden="true"><view class="calendar-binding"></view><view class="calendar-dot"></view></view>
+    </navigator>
   </view>
+  <view class="today-intro">
+    <view class="today-title serif" role="heading" aria-level="1">今天</view>
+    <view class="today-description">瑜伽和跑步，今天都给你留了位置。</view>
+  </view>
+  <view class="activity-list">
+    <view wx:for="{{activities}}" wx:key="id" class="activity-card {{item.kind}}">
+      <navigator class="card-link" url="/pages/plan-detail/index?source=today&day={{item.id}}&date={{date}}" hover-class="card-pressed" aria-label="{{item.name}}，{{item.time}}，{{item.duration}}，查看示例详情">
+        <view class="card-copy">
+          <view class="activity-title serif">{{item.name}}</view>
+          <view class="activity-time serif">{{item.time}}</view>
+          <view class="activity-duration">{{item.duration}}</view>
+        </view>
+        <view class="exercise-art {{item.kind}}-motion" aria-hidden="true">
+          <exercise-motion class="motion-player" id="motion-{{item.kind}}" kind="{{item.kind}}">
+            <view wx:if="{{item.kind === 'yoga' && !artFailed.yoga}}" class="yoga-art"><image class="yoga-sheet" src="/assets/week-illustrations.png" mode="scaleToFill" data-kind="yoga" binderror="onArtError" /></view>
+            <image wx:if="{{item.kind === 'running' && !artFailed.running}}" class="running-art" src="/assets/today-running.png" mode="aspectFit" data-kind="running" binderror="onArtError" />
+          </exercise-motion>
+        </view>
+      </navigator>
+      <button class="status-button" data-index="{{index}}" catchtap="toggleStatus" hover-class="status-pressed" aria-label="{{item.name}}示例状态：{{item.completed ? '已完成' : '未完成'}}，点击切换" aria-pressed="{{item.completed}}">
+        <view class="status-circle {{item.completed ? 'is-complete' : ''}}"><view wx:if="{{item.completed}}" class="status-tick"></view></view>
+      </button>
+    </view>
+  </view>
+  <view class="demo-note">界面示例 · 点选圆点切换状态，不保存记录</view>
 </view>

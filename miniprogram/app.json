@@ -1,7 +1,9 @@
 {
   "pages": [
     "pages/home/index",
-    "pages/today/index"
+    "pages/today/index",
+    "pages/week/index",
+    "pages/plan-detail/index"
   ],
   "window": {
     "navigationBarTitleText": "",
