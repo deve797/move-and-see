@@ -1,0 +1,17 @@
+.DS_Store
+node_modules/
+miniprogram_npm/
+project.private.config.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.db
+*.log
+.codex/
+.agents/

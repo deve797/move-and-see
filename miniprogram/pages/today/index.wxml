@@ -1,0 +1,9 @@
+<view class="placeholder">
+  <view class="brand serif">向前动</view>
+  <view class="placeholder-content">
+    <view class="placeholder-title serif" role="heading" aria-level="1">今天</view>
+    <view class="placeholder-note">今日安排将在这里展示。</view>
+    <view class="preview-label">页面占位 · 本轮仅演示首页与跳转</view>
+    <button class="back-button primary-button" hover-class="button-pressed" bindtap="goHome">返回首页</button>
+  </view>
+</view>
