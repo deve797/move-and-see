@@ -1,9 +1,15 @@
 <view class="mood-page">
+  <view wx:if="{{loading}}" class="mood-description" role="status">正在读取云端记录…</view>
+  <view wx:elif="{{loadError}}" class="mood-description" role="alert">{{loadError}}<button bindtap="retryLoad">重新读取</button></view>
+  <block wx:else>
+  <view wx:if="{{saving}}" class="mood-description" role="status">正在保存…</view>
+  <view wx:if="{{saveError}}" class="mood-description" role="alert">保存提示：{{saveError}}</view>
+  <button wx:if="{{saveConflict}}" disabled="{{saving}}" bindtap="reloadAfterConflict">放弃填写并重新读取</button>
   <view class="mood-title serif" role="heading" aria-level="1">{{isMakeup ? '补做后的心情' : '运动后的心情'}}</view>
   <view wx:if="{{plan}}" class="mood-description">{{plan.activity}} · {{plan.date}} {{plan.startTime}}<view>现在的心情怎么样？心情和备注都可跳过。</view></view>
   <view wx:else class="mood-description">{{isMakeup ? '找不到这次补做的运动，请返回计划列表。' : '找不到这次已完成的运动，请返回计划列表。'}}</view>
   <view wx:if="{{plan}}" class="mood-options" role="group" aria-label="运动后的心情，选填，单选">
-    <button wx:for="{{moods}}" wx:key="value" class="mood-option {{selectedMood === item.value ? 'mood-selected' : ''}}" data-value="{{item.value}}" bindtap="selectMood" hover-class="mood-option-pressed" aria-label="{{item.label}}" aria-pressed="{{selectedMood === item.value}}">
+    <button disabled="{{saving}}" wx:for="{{moods}}" wx:key="value" class="mood-option {{selectedMood === item.value ? 'mood-selected' : ''}}" data-value="{{item.value}}" bindtap="selectMood" hover-class="mood-option-pressed" aria-label="{{item.label}}" aria-pressed="{{selectedMood === item.value}}">
       <view class="mood-face face-{{item.value}}" aria-hidden="true">
         <view class="mood-eyes"></view><view class="mood-mouth"></view>
       </view>
@@ -13,11 +19,12 @@
   <view wx:if="{{plan}}" class="note-section">
     <view class="note-heading">想说两句吗？<text class="note-optional">（选填）</text></view>
     <view class="note-field {{noteFocused ? 'is-focused' : ''}}">
-      <textarea class="mood-textarea" value="{{note}}" placeholder="比如：吹了风，脑袋清爽些。" placeholder-class="note-placeholder" maxlength="200" cursor-spacing="24" adjust-position="{{true}}" show-confirm-bar="{{true}}" bindinput="inputNote" bindfocus="focusNote" bindblur="blurNote" aria-label="想说两句吗，选填，最多200字" />
+      <textarea disabled="{{saving}}" class="mood-textarea" value="{{note}}" placeholder="比如：吹了风，脑袋清爽些。" placeholder-class="note-placeholder" maxlength="200" cursor-spacing="24" adjust-position="{{true}}" show-confirm-bar="{{true}}" bindinput="inputNote" bindfocus="focusNote" bindblur="blurNote" aria-label="想说两句吗，选填，最多200字" />
       <view class="note-count">{{note.length}}/200</view>
     </view>
   </view>
-  <button wx:if="{{plan}}" class="mood-confirm primary-button" hover-class="button-pressed" bindtap="confirmMood">确认感受</button>
-  <button class="mood-back" hover-class="back-pressed" bindtap="goBack">{{plan ? '跳过，返回运动记录' : '返回'}}</button>
-  <view class="mood-demo">感受仅在本次运行内临时保留，关闭重开不保留。</view>
+  <button disabled="{{saving}}" wx:if="{{plan}}" class="mood-confirm primary-button" hover-class="button-pressed" bindtap="confirmMood">确认感受</button>
+  <button disabled="{{saving}}" class="mood-back" hover-class="back-pressed" bindtap="goBack">{{plan ? '跳过，返回运动记录' : '返回'}}</button>
+  <view class="mood-demo">感受保存成功后，可在重新打开时查看。</view>
+  </block>
 </view>

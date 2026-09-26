@@ -40,6 +40,7 @@ function validMakeupDate(value, planDate) {
 Page({
   data: {
     plan: null, completed: false, canComplete: false, artFailed: false, periodExempt: false,
+    loading: true, loadError: '', saving: false, saveError: '', saveConflict: false,
     incomplete: false, recordingIncomplete: false, selectedReason: '', canConfirmIncomplete: false,
     replacement: false, recordingReplacement: false, actualActivity: '', canConfirmReplacement: false,
     makeup: null, canMakeup: false, recordingMakeup: false, makeupDate: '', makeupActivity: '',
@@ -50,76 +51,124 @@ Page({
     runningFields, isRunning: false, runningData: runningValues(), runningError: '', runningPace: '',
     canCorrect: false, correcting: false, correctionStatus: '', correctionReason: '', canConfirmCorrection: false
   },
-  onLoad(query) {
-    this.planId = Number(query.planId);
+  onLoad(query) { this.planId = String(query.planId); },
+  async onShow() {
+    if (this.data.saving) return;
+    this.setData({ loading: true, loadError: '' });
+    try {
+      await getApp().loadData();
+      this.refreshPlan();
+    } catch (error) {
+      this.setData({ loadError: error.message || '暂时无法读取记录，请重试。' });
+    } finally {
+      this.setData({ loading: false });
+    }
   },
-  onShow() { this.refreshPlan(); },
+  retryLoad() { return this.onShow(); },
+  reloadAfterConflict() {
+    if (!this.data.saveConflict || this.data.saving) return;
+    wx.showModal({
+      title: '放弃填写并重新读取？',
+      content: '当前尚未保存的填写会被清空。读取最新记录后，可以重新填写。',
+      confirmText: '重新读取',
+      cancelText: '继续填写',
+      success: async result => {
+        if (!result.confirm || this.data.saving) return;
+        this._plan = null;
+        this.setData({
+          plan: null, recordingIncomplete: false, selectedReason: '', canConfirmIncomplete: false,
+          recordingReplacement: false, actualActivity: '', canConfirmReplacement: false,
+          recordingMakeup: false, makeupDate: '', makeupActivity: '', canConfirmMakeup: false,
+          correcting: false, correctionStatus: '', correctionReason: '', canConfirmCorrection: false,
+          runningData: runningValues(), runningError: '', runningPace: '', saveError: '', saveConflict: false
+        });
+        await this.onShow();
+      }
+    });
+  },
   refreshPlan() {
-    const plan = getApp().globalData.plans.find(item => item.id === this.planId && !item.cancelled);
+    if (this.data.saving) return;
+    const source = getApp().globalData.plans.find(item => String(item.id) === this.planId && !item.cancelled);
+    const plan = source ? JSON.parse(JSON.stringify(source)) : null;
+    if (plan) plan._dayVersion = getApp().getDay(plan.date).version;
+    this._plan = plan;
     const result = plan && plan.result;
     const makeup = result && result.status === 'incomplete' ? result.makeup || null : null;
-    this.feelingResult = makeup || result;
-    this.feelingPlanResult = result;
-    this.runningResult = plan && plan.result;
-    const runningData = runningValues(plan && plan.activity === '跑步' && plan.result && plan.result.status === 'completed' ? plan.result.runningData : undefined);
+    const motion = makeup || result;
+    const runningData = runningValues(plan && plan.activity === '跑步' && result && result.status === 'completed' ? result.runningData : undefined);
     this.setData({
-      plan: plan ? { id: plan.id, activity: plan.activity, date: plan.date, startTime: plan.startTime, result: plan.result || null } : null,
+      plan: plan ? { id: plan.id, activity: plan.activity, date: plan.date, startTime: plan.startTime, result: result || null } : null,
       periodExempt: isPeriodExempt(plan),
-      completed: Boolean(plan && plan.result && plan.result.status === 'completed'),
-      replacement: Boolean(plan && plan.result && plan.result.status === 'replacement'),
+      completed: Boolean(result && result.status === 'completed'),
+      replacement: Boolean(result && result.status === 'replacement'),
       makeup, canMakeup: canMakeup(plan), recordingMakeup: false, makeupDate: '', makeupActivity: '',
       makeupActivityIndex: 0, canConfirmMakeup: false, makeupEndDate: todayDate(),
       recordingReplacement: false, actualActivity: '', canConfirmReplacement: false, replacementActivityIndex: 0,
-      selectedFeeling: (makeup || (result && result.status === 'completed')) && this.data.feelingOptions.includes(this.feelingResult.feeling) ? this.feelingResult.feeling : '',
-      canComplete: Boolean(plan && !plan.result),
-      isRunning: Boolean(plan && plan.activity === '跑步' && (!plan.result || plan.result.status !== 'replacement')),
+      selectedFeeling: (makeup || (result && result.status === 'completed')) && this.data.feelingOptions.includes(motion.feeling) ? motion.feeling : '',
+      canComplete: Boolean(plan && !result),
+      isRunning: Boolean(plan && plan.activity === '跑步' && (!result || result.status !== 'replacement')),
       runningData,
       runningPace: formatRunningPace(runningData.durationMinutes, runningData.distanceKm),
-      runningError: '',
-      incomplete: Boolean(plan && plan.result && plan.result.status === 'incomplete'),
-      selectedReason: plan && plan.result && plan.result.status === 'incomplete' ? plan.result.reason || '' : '',
+      runningError: '', saveError: '', saveConflict: false,
+      incomplete: Boolean(result && result.status === 'incomplete'),
+      selectedReason: result && result.status === 'incomplete' ? result.reason || '' : '',
       recordingIncomplete: false, canConfirmIncomplete: false,
       canCorrect: canCorrect(plan), correcting: false, correctionStatus: '', correctionReason: '', canConfirmCorrection: false
     });
   },
-  selectFeeling(event) {
+  draftPlan() {
+    return this._plan && !this.data.saving && !this.data.loading && !this.data.loadError ? JSON.parse(JSON.stringify(this._plan)) : null;
+  },
+  async persistPlan(plan) {
+    if (!plan || this.data.saving) return false;
+    this.setData({ saving: true, saveError: '', saveConflict: false });
+    let saved = false;
+    try {
+      await getApp().savePlan(plan);
+      saved = true;
+    } catch (error) {
+      const message = error.message || '保存失败，请重试。';
+      this.setData({ saveError: message, saveConflict: ['VERSION_CONFLICT', 'DAY_VERSION_CONFLICT'].includes(error.code) });
+      wx.showToast({ title: message, icon: 'none' });
+    } finally {
+      this.setData({ saving: false });
+    }
+    if (saved) this.refreshPlan();
+    return saved;
+  },
+  async selectFeeling(event) {
     const feeling = event.currentTarget.dataset.feeling;
     if (this.data.correcting || this.data.recordingMakeup || (feeling !== '' && !this.data.feelingOptions.includes(feeling))) return;
-    const plan = getApp().globalData.plans.find(item => item.id === this.planId && !item.cancelled);
+    const plan = this.draftPlan();
     const result = plan && plan.result;
     const motion = result && (result.status === 'completed' ? result : result.status === 'incomplete' ? result.makeup : null);
-    if (motion && result === this.feelingPlanResult && motion === this.feelingResult) {
-      motion.feeling = feeling;
-      this.setData({ selectedFeeling: feeling });
-      return;
-    }
-    this.refreshPlan();
+    if (!motion) return;
+    motion.feeling = feeling;
+    const runningDraft = { runningData: { ...this.data.runningData }, runningError: this.data.runningError, runningPace: this.data.runningPace };
+    if (await this.persistPlan(plan)) this.setData(runningDraft);
   },
   inputRunningData(event) {
     const field = event.currentTarget.dataset.field;
-    if (!this.data.isRunning || this.data.recordingReplacement || this.data.recordingIncomplete || this.data.correcting || this.data.incomplete || !runningFields.some(item => item.key === field)) return;
+    if (this.data.saving || !this.data.isRunning || this.data.recordingReplacement || this.data.recordingIncomplete || this.data.correcting || this.data.incomplete || !runningFields.some(item => item.key === field)) return;
     const values = { ...this.data.runningData, [field]: event.detail.value };
     this.setData({
       runningData: values, runningError: runningError(runningValues(values)),
       runningPace: formatRunningPace(values.durationMinutes, values.distanceKm)
     });
   },
-  confirmRunningData() {
+  async confirmRunningData() {
     if (this.data.correcting || !this.data.completed) return;
-    const plan = getApp().globalData.plans.find(item => item.id === this.planId && !item.cancelled);
-    if (!plan || plan.activity !== '跑步' || !plan.result || plan.result.status !== 'completed' || plan.result !== this.runningResult) {
-      this.refreshPlan();
-      return;
-    }
+    const plan = this.draftPlan();
+    if (!plan || plan.activity !== '跑步' || !plan.result || plan.result.status !== 'completed') return;
     const values = runningValues(this.data.runningData);
     const error = runningError(values);
     this.setData({ runningError: error });
     if (error) return;
     plan.result.runningData = values;
-    this.refreshPlan();
-    wx.showToast({ title: '已记下本次跑步数据', icon: 'none' });
+    if (await this.persistPlan(plan)) wx.showToast({ title: '已保存本次跑步数据', icon: 'none' });
   },
   startCorrection() {
+    if (this.data.saving) return;
     this.refreshPlan();
     if (!this.data.canCorrect) return;
     const result = this.data.plan.result;
@@ -132,31 +181,29 @@ Page({
   },
   selectCorrectionStatus(event) {
     const status = event.currentTarget.dataset.status;
-    if (!this.data.correcting || !['completed', 'incomplete'].includes(status) || status === this.data.correctionStatus) return;
+    if (this.data.saving || !this.data.correcting || !['completed', 'incomplete'].includes(status) || status === this.data.correctionStatus) return;
     this.setData({ correctionStatus: status, correctionReason: '', canConfirmCorrection: status === 'completed' || this.data.periodExempt });
   },
   selectCorrectionReason(event) {
     const reason = event.currentTarget.dataset.reason;
-    if (!this.data.correcting || this.data.correctionStatus !== 'incomplete' || !this.data.reasonOptions.includes(reason)) return;
+    if (this.data.saving || !this.data.correcting || this.data.correctionStatus !== 'incomplete' || !this.data.reasonOptions.includes(reason)) return;
     this.setData({ correctionReason: reason, canConfirmCorrection: true });
   },
   cancelCorrection() { this.refreshPlan(); },
-  confirmCorrection() {
+  async confirmCorrection() {
     if (!this.data.correcting) return;
-    const plan = getApp().globalData.plans.find(item => item.id === this.planId);
-    if (!canCorrect(plan) || isPeriodExempt(plan) !== this.data.periodExempt) {
-      this.refreshPlan();
-      return;
-    }
+    const plan = this.draftPlan();
+    if (!canCorrect(plan)) return;
     const status = this.data.correctionStatus;
     const reason = this.data.correctionReason;
-    if (status !== 'completed' && !(status === 'incomplete' && (this.data.reasonOptions.includes(reason) || (isPeriodExempt(plan) && reason === '')))) return;
+    if (status !== 'completed' && !(status === 'incomplete' && (this.data.reasonOptions.includes(reason) || (this.data.periodExempt && reason === '')))) return;
     if (status !== plan.result.status || (status === 'incomplete' && reason !== plan.result.reason)) {
       plan.result = status === 'completed' ? { status } : { status, reason };
     }
-    this.refreshPlan();
+    await this.persistPlan(plan);
   },
   startIncomplete() {
+    if (this.data.saving) return;
     this.refreshPlan();
     if (!this.data.canComplete || this.data.periodExempt) return;
     this.setData({ recordingIncomplete: true });
@@ -164,29 +211,24 @@ Page({
   cancelIncomplete() { this.refreshPlan(); },
   selectReason(event) {
     const reason = event.currentTarget.dataset.reason;
-    if (!this.data.recordingIncomplete || !this.data.reasonOptions.includes(reason)) return;
+    if (this.data.saving || !this.data.recordingIncomplete || !this.data.reasonOptions.includes(reason)) return;
     this.setData({ selectedReason: reason, canConfirmIncomplete: true });
   },
-  confirmIncomplete() {
-    if (!this.data.recordingIncomplete) return;
-    const plan = getApp().globalData.plans.find(item => item.id === this.planId && !item.cancelled);
-    if (isPeriodExempt(plan)) {
-      this.refreshPlan();
-      return;
-    }
-    if (!this.data.reasonOptions.includes(this.data.selectedReason)) return;
-    if (plan && !plan.result) plan.result = { status: 'incomplete', reason: this.data.selectedReason };
-    this.refreshPlan();
+  async confirmIncomplete() {
+    if (!this.data.recordingIncomplete || this.data.periodExempt || !this.data.reasonOptions.includes(this.data.selectedReason)) return;
+    const plan = this.draftPlan();
+    if (!plan || plan.result) return;
+    plan.result = { status: 'incomplete', reason: this.data.selectedReason };
+    await this.persistPlan(plan);
   },
   startMakeup() {
+    if (this.data.saving) return;
     this.refreshPlan();
     if (!this.data.canMakeup) return;
-    this.makeupResult = this.data.plan.result;
-    this.makeupReason = this.makeupResult.reason;
     this.setData({ recordingMakeup: true });
   },
   updateMakeupDraft(change) {
-    if (!this.data.recordingMakeup) return;
+    if (this.data.saving || !this.data.recordingMakeup) return;
     const date = change.makeupDate === undefined ? this.data.makeupDate : change.makeupDate;
     const activity = change.makeupActivity === undefined ? this.data.makeupActivity : change.makeupActivity;
     this.setData({ ...change, canConfirmMakeup: validMakeupDate(date, this.data.plan.date) && this.data.replacementActivities.includes(activity) });
@@ -198,18 +240,15 @@ Page({
     this.updateMakeupDraft({ makeupActivity: activity, makeupActivityIndex: activity ? index : 0 });
   },
   cancelMakeup() { this.refreshPlan(); },
-  confirmMakeup() {
+  async confirmMakeup() {
     if (!this.data.recordingMakeup) return;
-    const plan = getApp().globalData.plans.find(item => item.id === this.planId);
-    if (!canMakeup(plan) || plan.result !== this.makeupResult || plan.result.reason !== this.makeupReason) {
-      this.refreshPlan();
-      return;
-    }
-    if (!validMakeupDate(this.data.makeupDate, plan.date) || !this.data.replacementActivities.includes(this.data.makeupActivity)) return;
+    const plan = this.draftPlan();
+    if (!canMakeup(plan) || !validMakeupDate(this.data.makeupDate, plan.date) || !this.data.replacementActivities.includes(this.data.makeupActivity)) return;
     plan.result.makeup = { date: this.data.makeupDate, actualActivity: this.data.makeupActivity };
-    this.refreshPlan();
+    await this.persistPlan(plan);
   },
   startReplacement() {
+    if (this.data.saving) return;
     this.refreshPlan();
     if (!this.data.canComplete) return;
     this.setData({ recordingReplacement: true });
@@ -217,29 +256,29 @@ Page({
   },
   cancelReplacement() { this.refreshPlan(); },
   selectReplacementActivity(event) {
-    if (!this.data.recordingReplacement) return;
+    if (this.data.saving || !this.data.recordingReplacement) return;
     const index = Number(event.detail.value);
     const actualActivity = this.data.replacementActivities[index] || '';
     this.setData({ actualActivity, replacementActivityIndex: actualActivity ? index : 0, canConfirmReplacement: Boolean(actualActivity) });
   },
-  confirmReplacement() {
+  async confirmReplacement() {
     if (!this.data.recordingReplacement || !this.data.replacementActivities.includes(this.data.actualActivity)) return;
-    const plan = getApp().globalData.plans.find(item => item.id === this.planId && !item.cancelled);
-    if (plan && !plan.result) plan.result = { status: 'replacement', actualActivity: this.data.actualActivity };
-    this.refreshPlan();
+    const plan = this.draftPlan();
+    if (!plan || plan.result) return;
+    plan.result = { status: 'replacement', actualActivity: this.data.actualActivity };
+    await this.persistPlan(plan);
   },
-  confirmCompleted() {
+  async confirmCompleted() {
     if (this.data.recordingReplacement) return;
-    const plan = getApp().globalData.plans.find(item => item.id === this.planId && !item.cancelled);
-    if (plan && !plan.result) {
-      const values = runningValues(this.data.runningData);
-      const error = plan.activity === '跑步' ? runningError(values) : '';
-      this.setData({ runningError: error });
-      if (error) return;
-      plan.result = { status: 'completed' };
-      if (plan.activity === '跑步') plan.result.runningData = values;
-    }
-    this.refreshPlan();
+    const plan = this.draftPlan();
+    if (!plan || plan.result) return;
+    const values = runningValues(this.data.runningData);
+    const error = plan.activity === '跑步' ? runningError(values) : '';
+    this.setData({ runningError: error });
+    if (error) return;
+    plan.result = { status: 'completed' };
+    if (plan.activity === '跑步') plan.result.runningData = values;
+    await this.persistPlan(plan);
   },
   onArtError() { this.setData({ artFailed: true }); }
 });

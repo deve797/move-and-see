@@ -3,6 +3,7 @@ const fourWeekProgress = require('../../utils/four-week-progress');
 const moods = require('../../utils/mood-options');
 Page({
   data: {
+    cloudLoading: true, cloudError: '',
     weeklyProgress: { completed: 0, total: 0 }, resultGroups: [], hasResults: false, reasonGroups: [],
     moodComparison: { improved: 0, same: 0, declined: 0, total: 0 },
     weeks: [],
@@ -10,11 +11,23 @@ Page({
     moodNotes: [],
     artFailed: false
   },
-  onShow() {
+  async onShow() {
+    this.setData({ cloudLoading: true, cloudError: '' });
+    try {
+      await getApp().loadData();
+      this.renderReview();
+    } catch (error) {
+      this.setData({ cloudError: error.message || '记录加载失败，请重试' });
+    } finally {
+      this.setData({ cloudLoading: false });
+    }
+  },
+  retryLoad() { return this.onShow(); },
+  renderReview() {
     const date = new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const data = getApp().globalData;
     const plans = weeklyProgress.getWeekPlans(data.plans, {}, date)
-      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime) || a.id - b.id);
+      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime) || String(a.id).localeCompare(String(b.id)));
     const resultGroups = [
       { key: 'completed', label: '按计划完成', plans: [] },
       { key: 'replacement', label: '替代完成', plans: [] },

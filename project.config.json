@@ -3,6 +3,7 @@
   "projectname": "Move&See UI",
   "compileType": "miniprogram",
   "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
   "setting": {
     "es6": true,
     "enhance": true,

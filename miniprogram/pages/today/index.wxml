@@ -1,4 +1,10 @@
 <view class="today-page">
+  <view wx:if="{{loading}}" class="period-hint" role="status">正在读取云端记录…</view>
+  <view wx:elif="{{loadError}}" class="period-hint" role="alert">{{loadError}}<button bindtap="retryLoad">重新读取</button></view>
+  <block wx:else>
+  <view wx:if="{{saving}}" class="period-hint" role="status">正在保存…</view>
+  <view wx:if="{{saveError}}" class="period-hint" role="alert">保存提示：{{saveError}}</view>
+  <button wx:if="{{saveConflict}}" disabled="{{saving}}" bindtap="reloadAfterConflict">放弃填写并重新读取</button>
   <view class="today-header">
     <view class="brand serif">Move&See</view>
     <navigator class="calendar-button week-entry" url="/pages/week/index" hover-class="calendar-pressed" aria-label="查看本周计划">
@@ -14,24 +20,24 @@
     <view class="progress-title">本周完成进度</view>
     <view wx:if="{{weeklyProgress.total}}" class="progress-count">已完成 {{weeklyProgress.completed}} / 应完成 {{weeklyProgress.total}}</view>
     <view wx:else class="progress-count">本周无考核计划</view>
-    <view class="progress-note">北京时间周一至周日 · 根据本次运行的临时记录计算</view>
+    <view class="progress-note">北京时间周一至周日 · 根据已保存的记录计算</view>
   </view>
   <view class="period-control">
-    <button class="period-button {{periodMarked ? 'period-selected' : ''}}" data-marked="{{!periodMarked}}" bindtap="setPeriod" hover-class="card-pressed" aria-pressed="{{periodMarked}}">{{periodMarked ? '取消当天生理期标记' : '标记今天为生理期'}}</button>
+    <button disabled="{{saving}}" class="period-button {{periodMarked ? 'period-selected' : ''}}" data-marked="{{!periodMarked}}" bindtap="setPeriod" hover-class="card-pressed" aria-pressed="{{periodMarked}}">{{periodMarked ? '取消当天生理期标记' : '标记今天为生理期'}}</button>
     <view class="period-hint">{{periodMarked ? '今天的计划均免考核，未运动无需填写原因。原安排和已有记录保留。' : '标记后，今天的所有计划免考核；误标可取消。'}}</view>
   </view>
   <view wx:if="{{periodMarked}}" class="period-walk">
     <block wx:if="{{!periodWalk}}">
       <view class="period-hint">想散步的话，可以自愿选择；不选也没关系。</view>
-      <button class="period-button walk-choice" bindtap="choosePeriodWalk" hover-class="card-pressed">选择散步 30 分钟</button>
+      <button disabled="{{saving}}" class="period-button walk-choice" bindtap="choosePeriodWalk" hover-class="card-pressed">选择散步 30 分钟</button>
     </block>
     <block wx:else>
       <view class="walk-title serif" role="heading" aria-level="2">散步 · 30 分钟</view>
-      <view class="period-hint">自愿选择 · 临时安排</view>
+      <view class="period-hint">自愿选择</view>
       <view class="walk-status" role="status">{{periodWalk.status === 'completed' ? '已完成' : periodWalk.status === 'incomplete' ? '未完成' : '待记录'}}</view>
       <view class="walk-actions" role="group" aria-label="散步 30 分钟的完成情况">
-        <button class="period-button {{periodWalk.status === 'completed' ? 'period-selected' : ''}}" data-status="completed" bindtap="recordPeriodWalk" hover-class="card-pressed" aria-pressed="{{periodWalk.status === 'completed'}}">已完成</button>
-        <button class="period-button {{periodWalk.status === 'incomplete' ? 'period-selected' : ''}}" data-status="incomplete" bindtap="recordPeriodWalk" hover-class="card-pressed" aria-pressed="{{periodWalk.status === 'incomplete'}}">未完成</button>
+        <button disabled="{{saving}}" class="period-button {{periodWalk.status === 'completed' ? 'period-selected' : ''}}" data-status="completed" bindtap="recordPeriodWalk" hover-class="card-pressed" aria-pressed="{{periodWalk.status === 'completed'}}">已完成</button>
+        <button disabled="{{saving}}" class="period-button {{periodWalk.status === 'incomplete' ? 'period-selected' : ''}}" data-status="incomplete" bindtap="recordPeriodWalk" hover-class="card-pressed" aria-pressed="{{periodWalk.status === 'incomplete'}}">未完成</button>
       </view>
       <view class="period-hint">未完成无需原因，完成与否都不影响今天免考核。{{activities.length ? '原计划仍在下方查看。' : ''}}</view>
     </block>
@@ -39,11 +45,11 @@
   <view class="activity-list">
     <view wx:for="{{activities}}" wx:key="id" class="activity-card {{item.kind}}">
       <view wx:if="{{item.periodExempt}}" class="period-badge" role="status">生理期免考核</view>
-      <view class="card-link" aria-label="{{item.name}}，开始时间{{item.time}}，临时安排">
+      <view class="card-link" aria-label="{{item.name}}，开始时间{{item.time}}，已添加的安排">
         <view class="card-copy">
           <view class="activity-title serif">{{item.name}}</view>
           <view class="activity-time serif">{{item.time}}</view>
-          <view class="activity-note">我添加的 · 临时</view>
+          <view class="activity-note">我添加的</view>
         </view>
         <view wx:if="{{!moodSheetOpen && item.kind}}" class="exercise-art {{item.kind}}-motion" aria-hidden="true">
           <exercise-motion wx:if="{{item.kind === 'yoga'}}" class="motion-player" id="motion-{{item.id}}" kind="yoga">
@@ -57,25 +63,28 @@
       <navigator class="record-entry" url="/pages/record/index?planId={{item.id}}" hover-class="card-pressed" aria-label="{{item.name}}，{{item.time}}，{{item.periodExempt ? '生理期免考核，' : ''}}{{item.result && item.result.makeup ? '已补做，' + item.result.makeup.date + '，实际' + item.result.makeup.actualActivity + '，查看结果' : item.result && item.result.status === 'replacement' ? '替代完成，实际' + item.result.actualActivity + '，查看结果' : item.completed ? '已完成，查看结果' : item.result && item.result.status === 'incomplete' ? '未完成' + (item.result.reason ? '，' + item.result.reason : '') + '，查看结果' : item.periodExempt ? '查看原安排，可不记录' : '记录这次运动'}}">
         <text>{{item.result && item.result.makeup ? '已补做 · ' + item.result.makeup.date + ' · 实际' + item.result.makeup.actualActivity : item.result && item.result.status === 'replacement' ? '替代完成 · 实际' + item.result.actualActivity : item.completed ? '已完成 · 查看结果' : item.result && item.result.status === 'incomplete' ? '未完成' + (item.result.reason ? ' · ' + item.result.reason : '') : item.periodExempt ? '查看原安排 · 可不记录' : '记录这次运动'}}</text><view class="mood-chevron" aria-hidden="true"></view>
       </navigator>
-      <button class="before-mood-entry {{item.beforeMood || item.beforeMoodNote ? 'has-mood' : ''}}" data-id="{{item.id}}" bindtap="openBeforeMood" hover-class="card-pressed" aria-label="{{item.name}}，运动前心情演示，{{item.beforeMoodLabel || '尚未选择'}}，{{item.beforeMoodNote ? '已写备注' : '未写备注'}}，点击修改">
-        <text>运动前心情 · 演示</text>
+      <button disabled="{{saving}}" class="before-mood-entry {{item.beforeMood || item.beforeMoodNote ? 'has-mood' : ''}}" data-id="{{item.id}}" bindtap="openBeforeMood" hover-class="card-pressed" aria-label="{{item.name}}，运动前心情，{{item.beforeMoodLabel || '尚未选择'}}，{{item.beforeMoodNote ? '已写备注' : '未写备注'}}，点击修改">
+        <text>运动前心情</text>
         <view class="before-mood-value"><text>{{item.beforeMoodLabel || (item.beforeMoodNote ? '已写备注' : '试试看')}}{{item.beforeMoodLabel && item.beforeMoodNote ? ' · 有备注' : ''}}</text><view class="mood-chevron" aria-hidden="true"></view></view>
       </button>
     </view>
   </view>
   <navigator class="review-entry" url="/pages/review/index" hover-class="calendar-pressed" aria-label="查看本周回看"><text>本周回看</text><view class="review-chevron" aria-hidden="true"></view></navigator>
-  <view class="demo-note">安排、结果、运动前感受、生理期标记和自愿散步仅在本次运行内临时保留，关闭重开不保留。</view>
+  <view class="demo-note">安排、结果、运动前感受、生理期标记和自愿散步保存成功后，可在重新打开时查看。</view>
+  </block>
 </view>
 <page-container show="{{moodSheetOpen}}" position="bottom" round="{{true}}" duration="180" bindclickoverlay="closeBeforeMood" bindafterleave="afterMoodLeave">
   <scroll-view class="mood-sheet-scroll" scroll-y="{{true}}">
   <view class="before-mood-sheet">
     <view class="mood-sheet-header">
       <view class="mood-sheet-title serif" role="heading" aria-level="2">运动前，心情怎么样？</view>
-      <button class="mood-sheet-close" bindtap="closeBeforeMood" hover-class="status-pressed" aria-label="关闭运动前心情选择"><view class="close-mark" aria-hidden="true"></view></button>
+      <button disabled="{{saving}}" class="mood-sheet-close" bindtap="closeBeforeMood" hover-class="status-pressed" aria-label="关闭运动前心情选择"><view class="close-mark" aria-hidden="true"></view></button>
     </view>
+    <view wx:if="{{saveError}}" class="period-hint" role="alert">保存提示：{{saveError}}</view>
+  <button wx:if="{{saveConflict}}" disabled="{{saving}}" bindtap="reloadAfterConflict">放弃填写并重新读取</button>
     <view class="mood-sheet-context">{{moodActivityName}} · {{moodActivityTime}}</view>
     <view class="mood-options" role="group" aria-label="运动前的心情，单选">
-      <button wx:for="{{beforeMoodOptions}}" wx:key="value" class="mood-option {{selectedBeforeMood === item.value ? 'mood-selected' : ''}}" data-value="{{item.value}}" bindtap="selectBeforeMood" hover-class="mood-option-pressed" aria-label="{{item.label}}" aria-pressed="{{selectedBeforeMood === item.value}}">
+      <button disabled="{{saving}}" wx:for="{{beforeMoodOptions}}" wx:key="value" class="mood-option {{selectedBeforeMood === item.value ? 'mood-selected' : ''}}" data-value="{{item.value}}" bindtap="selectBeforeMood" hover-class="mood-option-pressed" aria-label="{{item.label}}" aria-pressed="{{selectedBeforeMood === item.value}}">
         <view class="mood-face face-{{item.value}}" aria-hidden="true"><view class="mood-eyes"></view><view class="mood-mouth"></view></view>
         <text class="mood-label">{{item.label}}</text>
       </button>
@@ -83,11 +92,11 @@
     <view class="note-section">
       <view class="note-heading">想说两句吗？<text class="note-optional">（选填）</text></view>
       <view class="note-field {{beforeMoodNoteFocused ? 'is-focused' : ''}}">
-        <textarea wx:if="{{moodSheetOpen}}" class="mood-textarea" value="{{beforeMoodNote}}" placeholder="比如：有点累，想出去走走。" placeholder-class="note-placeholder" maxlength="200" cursor-spacing="24" adjust-position="{{true}}" show-confirm-bar="{{true}}" bindinput="inputBeforeMoodNote" bindfocus="focusBeforeMoodNote" bindblur="blurBeforeMoodNote" aria-label="运动前的感受，选填，最多200字" />
+        <textarea disabled="{{saving}}" wx:if="{{moodSheetOpen}}" class="mood-textarea" value="{{beforeMoodNote}}" placeholder="比如：有点累，想出去走走。" placeholder-class="note-placeholder" maxlength="200" cursor-spacing="24" adjust-position="{{true}}" show-confirm-bar="{{true}}" bindinput="inputBeforeMoodNote" bindfocus="focusBeforeMoodNote" bindblur="blurBeforeMoodNote" aria-label="运动前的感受，选填，最多200字" />
         <view class="note-count">{{beforeMoodNote.length}}/200</view>
       </view>
     </view>
-    <button class="primary-button mood-sheet-done" bindtap="confirmBeforeMood" hover-class="button-pressed">完成</button>
+    <button disabled="{{saving}}" class="primary-button mood-sheet-done" bindtap="confirmBeforeMood" hover-class="button-pressed">完成</button>
   </view>
   </scroll-view>
 </page-container>

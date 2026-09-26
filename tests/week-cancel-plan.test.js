@@ -1,3 +1,5 @@
+(async () => {
+const { createTestApp, prepareTestApp } = require('./helpers/runtime');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -13,7 +15,7 @@ let definition;
 const app = { globalData: { plans: [] } };
 const modals = [];
 vm.runInNewContext(fs.readFileSync(file, 'utf8'), {
-  require: createRequire(file), Date: FixedDate, getApp: () => app,
+  require: createRequire(file), Date: FixedDate, getApp: () => prepareTestApp(app),
   Page(value) { definition = value; },
   wx: { pageScrollTo() {}, showToast() {}, showModal(options) { modals.push(options); } }
 });
@@ -22,59 +24,63 @@ const page = Object.assign({}, definition, {
   setData(value) { Object.assign(this.data, value); }
 });
 const event = value => ({ detail: { value } });
-const cancel = id => page.cancelPlan({ currentTarget: { dataset: { id } } });
+const cancel = async id => (await page.cancelPlan({ currentTarget: { dataset: { id } } }));
 const visible = () => page.data.days.flatMap(day => day.plans);
-function add(date, time) {
+async function add(date, time) {
   page.startAdding();
   page.selectPlanDate(event(date));
   page.selectActivity(event('1'));
   page.selectStartTime(event(time));
-  page.confirmAdding();
+  (await page.confirmAdding());
 }
 
-page.onLoad();
-add('2026-09-29', '19:00');
-add('2026-09-29', '20:00');
+(await page.onLoad());
+  (await page.onShow());
+(await add('2026-09-29', '19:00'));
+(await add('2026-09-29', '20:00'));
 const original = JSON.stringify(page._plans);
-cancel(1);
+(await cancel(1));
 assert.match(modals[0].content, /2026-09-29.*19:00.*跑步/);
 assert.equal(JSON.stringify(page._plans), original); // 弹窗打开时不取消。
-modals.pop().success({ confirm: false, cancel: true });
+(await modals.pop().success({ confirm: false, cancel: true }));
 assert.equal(JSON.stringify(page._plans), original);
 assert.equal(visible().length, 2);
 
 const other = JSON.stringify(page._plans[1]);
-cancel(1);
+(await cancel(1));
 const confirmation = modals.pop();
-confirmation.success({ confirm: true });
-assert.deepEqual(Array.from(visible(), plan => plan.id), [2]);
+(await confirmation.success({ confirm: true }));
+assert.deepEqual(Array.from(visible(), plan => plan.id), ['2']);
 assert.equal(JSON.stringify(page._plans[1]), other);
-confirmation.success({ confirm: true }); // 重复回调不能影响其他安排。
-cancel(1);
+(await confirmation.success({ confirm: true })); // 重复回调不能影响其他安排。
+(await cancel(1));
 assert.equal(modals.length, 0);
 page.startEditing({ currentTarget: { dataset: { id: 1 } } });
 assert.equal(page.data.adding, false);
 page.showCurrentWeek();
 page.showNextWeek();
-assert.deepEqual(Array.from(visible(), plan => plan.id), [2]);
-add('2026-09-30', '18:00');
-assert.deepEqual(Array.from(visible(), plan => plan.id), [2, 3]);
+assert.deepEqual(Array.from(visible(), plan => plan.id), ['2']);
+(await add('2026-09-30', '18:00'));
+assert.deepEqual(Array.from(visible(), plan => plan.id), ['2', '3']);
 
-add('2026-09-26', '11:59');
-add('2026-09-26', '12:00');
-add('2026-09-26', '12:01');
+(await add('2026-09-26', '11:59'));
+(await add('2026-09-26', '12:00'));
+(await add('2026-09-26', '12:01'));
 page._plans[1].result = { status: 'completed' }; // 仅测试已有结果保护。
 const beforeBlocked = JSON.stringify(page._plans);
-[2, 4, 5, 999].forEach(cancel);
+for (const id of [2, 4, 5, 999]) await cancel(id);
 assert.equal(modals.length, 0);
 assert.equal(JSON.stringify(page._plans), beforeBlocked);
-cancel(6);
+(await cancel(6));
 now = '2026-09-26T12:01:00+08:00';
-modals.pop().success({ confirm: true });
+(await modals.pop().success({ confirm: true }));
 assert.equal(JSON.stringify(page._plans), beforeBlocked); // 确认期间刚好到时。
-cancel(3);
+(await cancel(3));
+page._plans[2].version += 1; // 模拟另一客户端先保存了结果。
 page._plans[2].result = { status: 'completed' };
 const withResult = JSON.stringify(page._plans);
-modals.pop().success({ confirm: true });
+(await modals.pop().success({ confirm: true }));
 assert.equal(JSON.stringify(page._plans), withResult); // 确认期间出现结果。
 console.log('PASS: cancel removes only selected plan, discard unchanged, week navigation, stable new IDs, past/current/result guards, confirmation-time recheck, repeated cancel');
+
+})().catch(error => { console.error(error); process.exitCode = 1; });

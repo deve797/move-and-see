@@ -1,3 +1,5 @@
+(async () => {
+const { createTestApp, prepareTestApp } = require('./helpers/runtime');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -8,54 +10,49 @@ let now = '2026-09-26T04:00:00Z';
 class FixedDate extends Date {
   constructor(...args) { super(...(args.length ? args : [now])); }
 }
-function runtime() {
-  let app;
-  vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../miniprogram/app.js'), 'utf8'), {
-    App(value) { app = value; }
-  });
-  return app;
-}
-function mount(app, name = 'today', planId) {
+function runtime() { return createTestApp(); }
+async function mount(app, name = 'today', planId) {
   const file = path.resolve(__dirname, '../miniprogram/pages/' + name + '/index.js');
   let definition;
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), {
-    require: createRequire(file), Date: FixedDate, getApp: () => app,
-    Page(value) { definition = value; }, wx: {}
+    require: createRequire(file), Date: FixedDate, getApp: () => prepareTestApp(app),
+    Page(value) { definition = value; }, wx: { showToast() {},}
   });
   const page = Object.assign({}, definition, {
     data: JSON.parse(JSON.stringify(definition.data)),
     setData(value) { Object.assign(this.data, value); }
   });
-  if (page.onLoad) page.onLoad({ planId: String(planId) });
-  page.onShow();
+  if (page.onLoad) (await page.onLoad({ planId: String(planId) }));
+  (await page.onShow());
   return page;
 }
 const plain = value => JSON.parse(JSON.stringify(value));
 const event = (key, value) => ({ currentTarget: { dataset: { [key]: value } } });
-const mark = (page, value) => page.setPeriod(event('marked', value));
-const record = (page, value) => page.recordPeriodWalk(event('status', value));
+const mark = async (page, value) => (await page.setPeriod(event('marked', value)));
+const record = async (page, value) => (await page.recordPeriodWalk(event('status', value)));
 const app = runtime();
 assert.ok(app.globalData.periodWalks, 'new runtime provides a separate map for voluntary walks');
 assert.deepEqual(plain(app.globalData.periodWalks), {});
-const today = mount(app);
+const today = (await mount(app));
 assert.equal(today.data.periodWalk, null);
-today.choosePeriodWalk();
-record(today, 'completed');
+(await today.choosePeriodWalk());
+(await record(today, 'completed'));
 assert.deepEqual(plain(app.globalData.periodWalks), {});
-mark(today, true);
+(await mark(today, true));
 assert.equal(today.data.periodWalk, null, 'marking a period day does not choose a walk');
-record(today, 'incomplete');
+(await record(today, 'incomplete'));
 assert.deepEqual(plain(app.globalData.periodWalks), {}, 'recording requires an explicit choice');
-today.choosePeriodWalk();
+(await today.choosePeriodWalk());
 assert.deepEqual(plain(today.data.periodWalk), { status: 'pending' });
 assert.deepEqual(plain(app.globalData.plans), [], 'a voluntary walk also works without original plans');
-const walk = app.globalData.periodWalks['2026-09-26'];
-today.choosePeriodWalk();
+const currentWalk = () => app.globalData.periodWalks['2026-09-26'];
+const walk = currentWalk();
+(await today.choosePeriodWalk());
 assert.equal(app.globalData.periodWalks['2026-09-26'], walk);
-record(today, 'incomplete');
-assert.deepEqual(plain(walk), { status: 'incomplete' }, 'no reason is required or invented');
+(await record(today, 'incomplete'));
+assert.deepEqual(plain(currentWalk()), { status: 'incomplete' }, 'no reason is required or invented');
 assert.equal(app.globalData.periodDays['2026-09-26'], true);
-assert.equal(mount(app).data.periodWalk.status, 'incomplete');
+assert.equal((await mount(app)).data.periodWalk.status, 'incomplete');
 
 app.globalData.plans.push(
   { id: 1, date: '2026-09-26', activity: '散步', startTime: '09:00' },
@@ -81,63 +78,67 @@ function assertOriginal() {
   });
 }
 for (const status of ['completed', 'completed', 'incomplete', 'incomplete']) {
-  today.onShow();
-  record(today, status);
-  today.choosePeriodWalk();
+  (await today.onShow());
+  (await record(today, status));
+  (await today.choosePeriodWalk());
   assert.equal(today.data.periodWalk.status, status, 'repeat choice never resets the recorded result');
-  assert.equal(app.globalData.periodWalks['2026-09-26'], walk);
+  assert.deepEqual(plain(currentWalk()), { status });
   assert.equal(app.globalData.periodDays['2026-09-26'], true);
   assert.equal(today.data.activities.length, 5);
   assert.equal(today.data.activities.every(item => item.periodExempt), true);
-  const weekPlans = mount(app, 'week').data.days.flatMap(day => day.plans);
+  const weekPlans = (await mount(app, 'week')).data.days.flatMap(day => day.plans);
   for (const id of [1, 2, 3, 4, 5]) {
     assert.equal(weekPlans.find(plan => plan.id === id).periodExempt, true);
-    const page = mount(app, 'record', id);
+    const page = (await mount(app, 'record', id));
     assert.equal(page.data.plan.id, id);
     assert.equal(page.data.periodExempt, true);
   }
-  assert.equal(mount(app, 'record', 6).data.periodExempt, false);
+  assert.equal((await mount(app, 'record', 6)).data.periodExempt, false);
   assertOriginal();
 }
-record(today, 'replacement');
-record(today, 'pending');
-assert.equal(walk.status, 'incomplete');
-const stale = mount(app);
-mark(today, false);
+(await record(today, 'replacement'));
+(await record(today, 'pending'));
+assert.equal(currentWalk().status, 'incomplete');
+const stale = (await mount(app));
+(await mark(today, false));
 assert.equal(today.data.periodWalk, null);
-record(stale, 'completed');
-stale.choosePeriodWalk();
-assert.equal(walk.status, 'incomplete');
+(await record(stale, 'completed'));
+(await stale.choosePeriodWalk());
+assert.equal(currentWalk().status, 'incomplete');
+assert.match(stale.data.saveError, /更新|刷新/);
+(await stale.onShow());
 assert.equal(stale.data.periodMarked, false);
 assert.equal(stale.data.periodWalk, null);
 assertOriginal();
-mark(today, true);
+(await mark(today, true));
 assert.equal(today.data.periodWalk.status, 'incomplete');
-assert.equal(mount(app).data.periodWalk.status, 'incomplete');
+assert.equal((await mount(app)).data.periodWalk.status, 'incomplete');
 
-const oldChoice = mount(app);
-const oldResult = mount(app);
+const oldChoice = (await mount(app));
+const oldResult = (await mount(app));
 const beforeMidnight = JSON.stringify(app.globalData);
 now = '2026-09-26T16:00:00Z';
-oldChoice.choosePeriodWalk();
-record(oldResult, 'completed');
+(await oldChoice.choosePeriodWalk());
+(await record(oldResult, 'completed'));
 assert.equal(oldChoice.data.date, '2026-09-27');
 assert.equal(oldResult.data.date, '2026-09-27');
 assert.equal(oldResult.data.periodWalk, null);
 assert.equal(JSON.stringify(app.globalData), beforeMidnight);
-const nextDay = mount(app);
-mark(nextDay, true);
+const nextDay = (await mount(app));
+(await mark(nextDay, true));
 assert.equal(nextDay.data.periodWalk, null);
-nextDay.choosePeriodWalk();
-record(nextDay, 'completed');
+(await nextDay.choosePeriodWalk());
+(await record(nextDay, 'completed'));
 assert.equal(app.globalData.periodWalks['2026-09-27'].status, 'completed');
-assert.equal(walk.status, 'incomplete');
+assert.equal(currentWalk().status, 'incomplete');
 assert.deepEqual(plain(app.globalData.periodDays), { '2026-09-26': true, '2026-09-27': true });
 assertOriginal();
 const fresh = runtime();
 assert.deepEqual(plain(fresh.globalData.periodWalks), {});
-assert.equal(mount(fresh).data.periodWalk, null);
+assert.equal((await mount(fresh)).data.periodWalk, null);
 
-console.log('PASS: voluntary-only walk, empty plans, reason-free independent results, repeat choice/result, reopen and runtime-only state');
+console.log('PASS: voluntary-only walk, empty plans, reason-free independent results, repeat choice/result, reopen and isolated async fixtures');
 console.log('PASS: original plans/results/feelings preserved, same-name isolation, today/week/record exemption, unmark/re-mark and stale guards');
 console.log('PASS: invalid status, Beijing midnight protection and date isolation');
+
+})().catch(error => { console.error(error); process.exitCode = 1; });

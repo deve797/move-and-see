@@ -1,0 +1,15 @@
+{
+  "envId": "xiangqiandong-d9g120h8m6a8ed8da",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "moveSeeApi",
+      "handler": "index.main",
+      "runtime": "Nodejs18.15",
+      "timeout": 20,
+      "memorySize": 256,
+      "installDependency": true,
+      "ignore": ["node_modules/**"]
+    }
+  ]
+}

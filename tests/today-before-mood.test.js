@@ -1,3 +1,5 @@
+(async () => {
+const { createTestApp, prepareTestApp } = require('./helpers/runtime');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -7,27 +9,21 @@ const { createRequire } = require('node:module');
 class FixedDate extends Date {
   constructor(...args) { super(...(args.length ? args : ['2026-09-26T04:00:00Z'])); }
 }
-function runtime() {
-  let app;
-  vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../miniprogram/app.js'), 'utf8'), {
-    App(value) { app = value; }
-  });
-  return app;
-}
-function mount(name, app, planId) {
+function runtime() { return createTestApp(); }
+async function mount(name, app, planId) {
   const file = path.resolve(__dirname, '../miniprogram/pages/' + name + '/index.js');
   let definition;
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), {
-    require: createRequire(file), Date: FixedDate, getApp: () => app,
+    require: createRequire(file), Date: FixedDate, getApp: () => prepareTestApp(app),
     Page(value) { definition = value; },
-    wx: { pageScrollTo() {}, showToast() {} }
+    wx: { showToast() {}, pageScrollTo() {}, showToast() {} }
   });
   const page = Object.assign({}, definition, {
     data: JSON.parse(JSON.stringify(definition.data)),
     setData(value) { Object.assign(this.data, value); }
   });
-  if (page.onLoad) page.onLoad({ planId });
-  if (page.onShow) page.onShow();
+  if (page.onLoad) (await page.onLoad({ planId }));
+  if (page.onShow) (await page.onShow());
   return page;
 }
 const event = (key, value) => ({ currentTarget: { dataset: { [key]: value } } });
@@ -43,10 +39,10 @@ app.globalData.plans.push(
 );
 const snapshot = () => JSON.stringify(app.globalData.plans);
 const activity = (page, id) => page.data.activities.find(item => item.id === id);
-const baseFields = () => JSON.stringify(app.globalData.plans.map(({ beforeMood, beforeMoodNote, ...plan }) => plan));
+const baseFields = () => JSON.stringify(app.globalData.plans.map(({ beforeMood, beforeMoodNote, version, ...plan }) => plan));
 const originalFields = baseFields();
 const original = snapshot();
-const today = mount('today', app);
+const today = (await mount('today', app));
 assert.equal(activity(today, 1).beforeMood, '');
 assert.equal(activity(today, 1).beforeMoodNote, '');
 assert.equal(today.data.activities[0].id, 2); // 页面排序与共享数组顺序不同。
@@ -57,28 +53,28 @@ choose(today, 'good');
 const note = '  有点累，想出去走走。\n慢慢开始。  ';
 input(today, note);
 assert.equal(snapshot(), original); // 选择与输入只是草稿。
-today.confirmBeforeMood();
+(await today.confirmBeforeMood());
 assert.equal(app.globalData.plans[0].beforeMood, 'good');
 assert.equal(app.globalData.plans[0].beforeMoodNote, note);
 assert.equal(activity(today, 1).beforeMoodLabel, '不错');
 assert.equal(activity(today, 1).beforeMoodNote, note);
 assert.equal(activity(today, 2).beforeMood, '');
 const saved = snapshot();
-today.confirmBeforeMood();
+(await today.confirmBeforeMood());
 assert.equal(snapshot(), saved);
 today.afterMoodLeave();
 
-mount('week', app); // 离开后返回同一实例，再重新创建今天页。
-today.onShow();
+(await mount('week', app)); // 离开后返回同一实例，再重新创建今天页。
+(await today.onShow());
 assert.equal(activity(today, 1).beforeMoodLabel, '不错');
-const reopened = mount('today', app);
+const reopened = (await mount('today', app));
 open(reopened, 1);
 assert.equal(reopened.data.selectedBeforeMood, 'good');
 assert.equal(reopened.data.beforeMoodNote, note);
 choose(reopened, 'low');
 input(reopened, '未确认的修改');
 reopened.closeBeforeMood();
-reopened.confirmBeforeMood();
+(await reopened.confirmBeforeMood());
 reopened.afterMoodLeave();
 assert.equal(snapshot(), saved);
 open(reopened, 1);
@@ -86,7 +82,7 @@ assert.equal(reopened.data.selectedBeforeMood, 'good');
 assert.equal(reopened.data.beforeMoodNote, note);
 choose(reopened, 'down');
 input(reopened, '离页放弃');
-reopened.onShow();
+(await reopened.onShow());
 assert.equal(snapshot(), saved);
 assert.equal(reopened.data.moodSheetOpen, false);
 open(reopened, 1);
@@ -98,7 +94,7 @@ open(reopened, 2);
 assert.equal(reopened.data.selectedBeforeMood, '');
 assert.equal(reopened.data.beforeMoodNote, '');
 input(reopened, '只写备注');
-reopened.confirmBeforeMood();
+(await reopened.confirmBeforeMood());
 reopened.afterMoodLeave();
 assert.equal(app.globalData.plans[1].beforeMood, '');
 assert.equal(app.globalData.plans[1].beforeMoodNote, '只写备注');
@@ -106,13 +102,13 @@ assert.equal(app.globalData.plans[0].beforeMoodNote, note);
 open(reopened, 2);
 choose(reopened, 'great');
 input(reopened, '');
-reopened.confirmBeforeMood();
+(await reopened.confirmBeforeMood());
 reopened.afterMoodLeave();
 assert.equal(app.globalData.plans[1].beforeMood, 'great');
 assert.equal(app.globalData.plans[1].beforeMoodNote, '');
 open(reopened, 1);
 input(reopened, '');
-reopened.confirmBeforeMood();
+(await reopened.confirmBeforeMood());
 reopened.afterMoodLeave();
 assert.equal(app.globalData.plans[0].beforeMood, 'good');
 assert.equal(app.globalData.plans[0].beforeMoodNote, '');
@@ -121,9 +117,9 @@ assert.equal(baseFields(), originalFields); // 感受不改变原计划、结果
 
 const emptyApp = runtime();
 emptyApp.globalData.plans.push({ id: 1, date: '2026-09-26', activity: '跑步', startTime: '19:00' });
-const blank = mount('today', emptyApp);
+const blank = (await mount('today', emptyApp));
 open(blank, 1);
-blank.confirmBeforeMood();
+(await blank.confirmBeforeMood());
 assert.equal(blank.data.moodSheetOpen, false);
 assert.equal(emptyApp.globalData.plans[0].beforeMood, '');
 assert.equal(emptyApp.globalData.plans[0].beforeMoodNote, '');
@@ -133,28 +129,32 @@ const protectedState = snapshot();
 for (const id of [3, 4, 999, 'invalid', undefined]) {
   open(reopened, id);
   assert.equal(reopened.data.moodSheetOpen, false);
-  reopened.confirmBeforeMood();
+  (await reopened.confirmBeforeMood());
   assert.equal(snapshot(), protectedState);
 }
 open(reopened, 1);
 choose(reopened, 'invalid');
 assert.equal(reopened.data.selectedBeforeMood, 'good');
 choose(reopened, 'low');
+app.globalData.plans[0].version += 1;
 app.globalData.plans[0].cancelled = true;
-reopened.confirmBeforeMood();
+(await reopened.confirmBeforeMood());
 delete app.globalData.plans[0].cancelled;
-assert.equal(snapshot(), protectedState); // 确认时仍按 ID 检查有效计划。
+assert.deepEqual(JSON.parse(snapshot()).map(({ version, ...plan }) => plan), JSON.parse(protectedState).map(({ version, ...plan }) => plan)); // 冲突不能覆盖已取消的计划。
+assert.match(reopened.data.saveError, /更新|刷新/);
 
-const record = mount('record', app, 1);
-record.confirmCompleted();
+const record = (await mount('record', app, 1));
+(await record.confirmCompleted());
 record.startCorrection();
 record.selectCorrectionStatus(event('status', 'incomplete'));
 record.selectCorrectionReason(event('reason', '下雨'));
-record.confirmCorrection();
+(await record.confirmCorrection());
 assert.equal(app.globalData.plans[0].result.reason, '下雨');
 assert.equal(app.globalData.plans[0].beforeMood, 'good');
-reopened.onShow();
+(await reopened.onShow());
 assert.equal(activity(reopened, 1).beforeMoodLabel, '不错');
 assert.equal(activity(reopened, 2).beforeMoodLabel, '很好');
-assert.equal(mount('today', runtime()).data.activities.length, 0);
-console.log('PASS: per-plan before mood/note, sorted same-name isolation, navigation/recreated page, optional fields, discard/native close, repeat confirmation, stable plans/results, cancelled guards, result correction, runtime-only state');
+assert.equal((await mount('today', runtime())).data.activities.length, 0);
+console.log('PASS: per-plan before mood/note, sorted same-name isolation, navigation/recreated page, optional fields, discard/native close, repeat confirmation, stable plans/results, cancelled guards, result correction, isolated async fixtures');
+
+})().catch(error => { console.error(error); process.exitCode = 1; });

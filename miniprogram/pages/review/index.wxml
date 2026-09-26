@@ -4,6 +4,12 @@
     <view class="review-title serif" role="heading" aria-level="1">本周回看</view>
     <view class="review-description">这周怎么动的？翻翻看。</view>
   </view>
+  <view wx:if="{{cloudLoading}}" class="result-detail" role="status">正在读取云端记录…</view>
+  <view wx:elif="{{cloudError}}" class="result-detail" role="alert">
+    <text>{{cloudError}}</text>
+    <button bindtap="retryLoad">重新加载</button>
+  </view>
+  <block wx:else>
   <view class="review-card summary-card">
     <view class="summary-icon shoe-art" aria-hidden="true"><image wx:if="{{!artFailed}}" class="shoe-sheet" src="/assets/week-illustrations.png" mode="scaleToFill" binderror="onArtError" /></view>
     <view class="summary-copy">
@@ -38,7 +44,7 @@
       <view class="result-detail">其中已补做 {{item.makeupCount}} 次</view>
     </view>
   </view>
-  <view class="review-demo">本周结果和原因分布来自本次运行内的临时记录，关闭重开不保留。</view>
+  <view class="review-demo">本周结果和原因分布来自已保存的运动记录。</view>
   <view class="review-card chart-card">
     <view class="card-heading" role="heading" aria-level="2">最近四周完成率</view>
     <view class="result-detail">北京时间 · 周一至周日，以周一日期标示。完成数 / 有效计划数，百分比四舍五入到整数。</view>
@@ -56,7 +62,7 @@
       </view>
     </view>
     <view class="result-detail">未来计划计入分母；取消及免考核计划不计入。跨周补做更新原计划周。</view>
-    <view class="result-detail">来自本次运行内的临时记录，关闭重开不保留。过去周没有计划记录时显示“无数据”。</view>
+    <view class="result-detail">来自已保存的运动记录。过去周没有计划记录时显示“无数据”。</view>
   </view>
   <view id="mood-summary" class="review-card mood-summary">
     <view class="mood-summary-header">
@@ -70,12 +76,12 @@
       <view class="result-plan"><view class="result-heading"><text class="result-activity">相同</text><text class="result-count">{{moodComparison.same}} 次</text></view></view>
       <view class="result-plan"><view class="result-heading"><text class="result-activity">下降</text><text class="result-count">{{moodComparison.declined}} 次</text></view></view>
     </view>
-    <view class="result-detail">心情统计来自本次运行内的临时记录，关闭重开不保留。</view>
+    <view class="result-detail">心情统计来自已保存的运动记录。</view>
     <button class="mood-notes-toggle" bindtap="toggleMoodNotes" hover-class="back-pressed" aria-expanded="{{moodNotesExpanded}}" aria-controls="mood-notes" aria-label="{{moodNotesExpanded ? '收起当时写的话' : '展开当时写的话，查看运动前后的文字'}}">
       <text>{{moodNotesExpanded ? '收起当时写的话' : '看看当时写的话'}}</text><view class="notes-chevron {{moodNotesExpanded ? 'is-expanded' : ''}}" aria-hidden="true"></view>
     </button>
     <view wx:if="{{moodNotesExpanded}}" id="mood-notes" class="mood-notes">
-      <view class="notes-caption">按原计划所在周回看，补做备注显示实际日期和运动。原话来自本次运行内的临时记录，关闭重开不保留。</view>
+      <view class="notes-caption">按原计划所在周回看，补做备注显示实际日期和运动。原话来自已保存的备注。</view>
       <view wx:if="{{!moodNotes.length}}" class="result-none" role="status">本周还没有写下备注。</view>
       <view wx:for="{{moodNotes}}" wx:key="id" class="mood-note-entry">
         <view class="note-entry-heading"><text class="note-activity">{{item.activity}}</text><text class="note-date">{{item.date}}</text></view>
@@ -86,5 +92,6 @@
       <button class="mood-notes-collapse" bindtap="collapseMoodNotes" hover-class="back-pressed" aria-label="收起原话并返回前后心情变化">收起原话</button>
     </view>
   </view>
+  </block>
   <button class="review-back" hover-class="back-pressed" bindtap="goBack">返回今天</button>
 </view>
