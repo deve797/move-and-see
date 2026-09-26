@@ -1,8 +1,9 @@
 <view class="today-page">
   <view class="today-header">
     <view class="brand serif">向前动</view>
-    <navigator class="calendar-button week-entry" url="/pages/week/index" hover-class="calendar-pressed" aria-label="查看周计划">
+    <navigator class="calendar-button week-entry" url="/pages/week/index" hover-class="calendar-pressed" aria-label="查看本周计划">
       <view class="calendar-icon" aria-hidden="true"><view class="calendar-binding"></view><view class="calendar-dot"></view></view>
+      <text>本周计划</text>
     </navigator>
   </view>
   <view class="today-intro">

@@ -24,6 +24,10 @@
 .activity-duration { font-size: 13px; line-height: 1.6; color: #71746f; }
 .day-art { position: relative; flex-shrink: 0; width: 58px; height: 58px; overflow: hidden; }
 .art-sheet { position: absolute; width: 400%; height: 200%; }
+.week-actions { margin-top: 24px; }
+.week-page .week-next { width: 100%; min-height: 48px; border-radius: 24px; font-size: 16px; line-height: 1.5; }
+.week-page .week-current { width: 100%; min-height: 44px; margin-top: 8px; border-radius: 22px; background: transparent; color: #50584d; font-size: 15px; line-height: 44px; }
+.week-page .week-current.day-pressed { background: #f4f6f2; }
 .demo-note { margin-top: 20px; color: #71746f; font-size: 12px; line-height: 1.7; }
 @media (max-width: 340px) {
   .week-intro { margin-top: 22px; }

@@ -25,6 +25,9 @@ function nextMonday(now) {
   start.setDate(start.getDate() + 7);
   return dateKey(start);
 }
+function currentMonday(now) {
+  return dateKey(monday(now));
+}
 function weekPreview(value, now) {
   const start = monday(parseDate(value));
   const days = samples.map((sample, index) => {
@@ -33,7 +36,9 @@ function weekPreview(value, now) {
     return Object.assign({}, sample, { id: index, date: dateKey(date), shortDate: (date.getMonth() + 1) + '/' + date.getDate() });
   });
   const key = dateKey(start);
-  const title = key === nextMonday(now) ? '下周怎么动？' : key === dateKey(monday(now)) ? '这周怎么动？' : '这一周怎么动？';
-  return { days, selectedDate: key, title, range: days[0].shortDate + ' — ' + days[6].shortDate };
+  const isCurrentWeek = key === currentMonday(now);
+  const isNextWeek = key === nextMonday(now);
+  const title = isCurrentWeek ? '本周计划' : isNextWeek ? '下周怎么动？' : '这一周的计划';
+  return { days, selectedDate: key, title, isCurrentWeek, isNextWeek, range: days[0].shortDate + ' — ' + days[6].shortDate };
 }
-module.exports = { samples, nextMonday, weekPreview };
+module.exports = { samples, currentMonday, nextMonday, weekPreview };

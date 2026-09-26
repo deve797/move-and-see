@@ -9,7 +9,7 @@
   </view>
   <view class="week-intro">
     <view class="week-title serif" role="heading" aria-level="1">{{title}}</view>
-    <view class="week-description">给喜欢的运动，留几个小空档。</view>
+    <view class="week-description">{{isCurrentWeek ? '这周的安排，都在这里。' : isNextWeek ? '周末想一想，给下周留几个小空档。' : '看看这一周的运动安排。'}}</view>
     <view class="week-range">{{range}}</view>
   </view>
   <view class="week-list">
@@ -19,6 +19,10 @@
       <view class="activity"><text class="activity-name {{item.tone === 'rest' ? 'rest-name' : ''}}">{{item.name}}</text><text wx:if="{{item.duration}}" class="activity-duration">{{item.duration}}</text></view>
       <view wx:if="{{!artFailed}}" class="day-art" aria-hidden="true"><image class="art-sheet" src="/assets/week-illustrations.png" style="left: {{-item.col * 100}}%; top: {{-item.row * 100}}%;" mode="scaleToFill" binderror="onArtError" /></view>
     </navigator>
+  </view>
+  <view class="week-actions">
+    <button wx:if="{{!isNextWeek}}" class="week-next primary-button" bindtap="showNextWeek" hover-class="button-pressed" aria-label="安排下周，切换到下周计划示例">安排下周</button>
+    <button wx:if="{{!isCurrentWeek}}" class="week-current" bindtap="showCurrentWeek" hover-class="day-pressed">查看本周计划</button>
   </view>
   <view class="demo-note">界面示例 · 点选一天查看 · 暂不保存计划</view>
 </view>
