@@ -1,0 +1,17 @@
+<view class="record-page">
+  <view class="record-intro">
+    <view class="record-title serif" role="heading" aria-level="1">记下这次运动</view>
+    <view class="record-description">刚刚怎么动的？记两笔就好。</view>
+  </view>
+  <view class="record-scene" aria-hidden="true">
+    <image wx:if="{{!artFailed}}" class="walking-art" src="/assets/record-walking.png" mode="aspectFit" binderror="onArtError" />
+  </view>
+  <view class="record-summary" aria-label="{{activityName}}，{{minutes}}分钟，示例记录">
+    <view class="record-duration serif"><text class="minutes">{{minutes}}</text><text class="minutes-unit">分钟</text></view>
+    <view class="activity-name">{{activityName}}</view>
+  </view>
+  <button class="record-next primary-button" hover-class="button-pressed" bindtap="openMood" aria-label="记好了，进入运动后心情页面，当前为界面演示">
+    <text>记好了</text><view class="next-arrow" aria-hidden="true"></view>
+  </button>
+  <view class="record-demo">界面示例 · 本轮不保存运动记录</view>
+</view>

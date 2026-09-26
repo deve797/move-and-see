@@ -1,0 +1,48 @@
+<view class="review-page">
+  <view class="review-header"><view class="brand serif">向前动</view></view>
+  <view class="review-intro">
+    <view class="review-title serif" role="heading" aria-level="1">本周回看</view>
+    <view class="review-description">这周怎么动的？翻翻看。</view>
+  </view>
+  <view class="review-card chart-card">
+    <view class="card-heading" role="heading" aria-level="2">近四周运动次数</view>
+    <view class="chart-plot" aria-label="示例：第1周2次，第2周3次，第3周4次，第4周5次">
+      <view wx:for="{{weeks}}" wx:key="label" class="chart-column">
+        <view class="bar-value">{{item.count}}次</view>
+        <view class="chart-bar {{index === weeks.length - 1 ? 'current-bar' : ''}}" style="height: {{item.count * 48}}rpx;" aria-hidden="true"></view>
+      </view>
+    </view>
+    <view class="chart-labels"><text wx:for="{{weeks}}" wx:key="label" class="week-label">{{item.label}}</text></view>
+  </view>
+  <view class="review-card summary-card">
+    <view class="summary-icon shoe-art" aria-hidden="true"><image wx:if="{{!artFailed}}" class="shoe-sheet" src="/assets/week-illustrations.png" mode="scaleToFill" binderror="onArtError" /></view>
+    <view class="summary-copy">
+      <view class="card-heading" role="heading" aria-level="2">这周运动</view>
+      <view class="summary-line"><view class="summary-value"><text class="summary-number serif">{{thisWeekCount}}</text><text class="summary-unit">次</text></view><view class="summary-detail">比上周多 {{moreThanLastWeek}} 次</view></view>
+    </view>
+  </view>
+  <view id="mood-summary" class="review-card mood-summary">
+    <view class="mood-summary-header">
+      <view class="summary-icon bulb-icon" aria-hidden="true"><view class="bulb-head"><view class="bulb-filament"></view></view><view class="bulb-neck"></view><view class="bulb-base"></view></view>
+      <view class="summary-copy"><view class="card-heading" role="heading" aria-level="2">心情小发现</view><view class="mood-detail">运动后心情变好 {{betterMoodCount}} 次</view></view>
+    </view>
+    <view class="mood-text-summary">
+      <view class="mood-example-label">文字总结示例</view>
+      <text class="mood-summary-text" selectable="{{true}}">{{moodTextSummary}}</text>
+    </view>
+    <button class="mood-notes-toggle" bindtap="toggleMoodNotes" hover-class="back-pressed" aria-expanded="{{moodNotesExpanded}}" aria-controls="mood-notes" aria-label="{{moodNotesExpanded ? '收起当时写的话' : '展开当时写的话，查看运动前后的文字'}}">
+      <text>{{moodNotesExpanded ? '收起当时写的话' : '看看当时写的话'}}</text><view class="notes-chevron {{moodNotesExpanded ? 'is-expanded' : ''}}" aria-hidden="true"></view>
+    </button>
+    <view wx:if="{{moodNotesExpanded}}" id="mood-notes" class="mood-notes">
+      <view class="notes-caption">有文字备注的运动 · 示例原话</view>
+      <view wx:for="{{moodNotes}}" wx:key="id" class="mood-note-entry">
+        <view class="note-entry-heading"><text class="note-activity">{{item.activity}}</text><text class="note-date">{{item.date}}</text></view>
+        <view wx:if="{{item.before}}" class="note-line"><text class="note-phase">运动前</text><text class="note-quote" selectable="{{true}}">{{item.before}}</text></view>
+        <view wx:if="{{item.after}}" class="note-line"><text class="note-phase">运动后</text><text class="note-quote" selectable="{{true}}">{{item.after}}</text></view>
+      </view>
+      <button class="mood-notes-collapse" bindtap="collapseMoodNotes" hover-class="back-pressed" aria-label="收起原话并返回心情总结">收起原话</button>
+    </view>
+  </view>
+  <view class="review-demo">界面示例 · 数字、总结和原话均为示例</view>
+  <button class="review-back" hover-class="back-pressed" bindtap="goBack">返回今天</button>
+</view>

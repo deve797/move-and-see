@@ -1,0 +1,22 @@
+.record-page { min-height: 100vh; padding: 20px 48rpx 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.record-title { font-size: 76rpx; line-height: 1.35; font-weight: 700; letter-spacing: -1px; }
+.record-description { margin-top: 12px; color: #71746f; font-size: 16px; line-height: 1.7; }
+.record-scene { margin: 18px -48rpx 0; height: 680rpx; }
+.walking-art { display: block; width: 100%; height: 100%; }
+.record-summary { margin-top: 14px; text-align: center; }
+.record-duration { display: flex; align-items: baseline; justify-content: center; gap: 6px; font-weight: 700; line-height: 1.2; }
+.minutes { font-size: 48px; font-variant-numeric: tabular-nums; }
+.minutes-unit { font-size: 29px; }
+.activity-name { margin-top: 11px; color: #71746f; font-size: 16px; line-height: 1.7; }
+.record-page .record-next { width: 100%; min-height: 60px; margin-top: 24px; border-radius: 30px; font-size: 21px; line-height: 1.4; }
+.next-arrow { position: relative; width: 19px; height: 1px; margin-left: 15px; background: currentColor; }
+.next-arrow::after { content: ""; position: absolute; right: 0; top: -4px; width: 8px; height: 8px; border-top: 1px solid currentColor; border-right: 1px solid currentColor; transform: rotate(45deg); }
+.record-demo { margin-top: 16px; color: #71746f; font-size: 12px; line-height: 1.7; text-align: center; }
+@media (max-width: 340px) {
+  .record-page { padding-top: 16px; }
+  .record-description { font-size: 15px; margin-top: 10px; }
+  .record-scene { margin-top: 14px; }
+  .minutes { font-size: 44px; }
+  .minutes-unit { font-size: 27px; }
+  .record-page .record-next { min-height: 56px; margin-top: 20px; font-size: 20px; }
+}

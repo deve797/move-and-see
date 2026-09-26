@@ -1,0 +1,21 @@
+<view class="mood-page">
+  <view class="mood-title serif" role="heading" aria-level="1">运动后的心情</view>
+  <view class="mood-description">现在的心情怎么样？</view>
+  <view class="mood-options" role="group" aria-label="运动后的心情，单选">
+    <button wx:for="{{moods}}" wx:key="value" class="mood-option {{selectedMood === item.value ? 'mood-selected' : ''}}" data-value="{{item.value}}" bindtap="selectMood" hover-class="mood-option-pressed" aria-label="{{item.label}}" aria-pressed="{{selectedMood === item.value}}">
+      <view class="mood-face face-{{item.value}}" aria-hidden="true">
+        <view class="mood-eyes"></view><view class="mood-mouth"></view>
+      </view>
+      <text class="mood-label">{{item.label}}</text>
+    </button>
+  </view>
+  <view class="note-section">
+    <view class="note-heading">想说两句吗？<text class="note-optional">（选填）</text></view>
+    <view class="note-field {{noteFocused ? 'is-focused' : ''}}">
+      <textarea class="mood-textarea" value="{{note}}" placeholder="比如：吹了风，脑袋清爽些。" placeholder-class="note-placeholder" maxlength="200" cursor-spacing="24" adjust-position="{{true}}" show-confirm-bar="{{true}}" bindinput="inputNote" bindfocus="focusNote" bindblur="blurNote" aria-label="想说两句吗，选填，最多200字" />
+      <view class="note-count">{{note.length}}/200</view>
+    </view>
+  </view>
+  <button class="mood-back" hover-class="back-pressed" bindtap="goBack">返回运动记录</button>
+  <view class="mood-demo">界面示例 · 心情和备注不保存</view>
+</view>

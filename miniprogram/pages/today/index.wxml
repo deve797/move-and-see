@@ -11,13 +11,13 @@
   </view>
   <view class="activity-list">
     <view wx:for="{{activities}}" wx:key="id" class="activity-card {{item.kind}}">
-      <navigator class="card-link" url="/pages/plan-detail/index?source=today&day={{item.id}}&date={{date}}" hover-class="card-pressed" aria-label="{{item.name}}，{{item.time}}，{{item.duration}}，查看示例详情">
+      <navigator class="card-link" url="/pages/record/index?source=today&day={{item.id}}&date={{date}}" hover-class="card-pressed" aria-label="{{item.name}}，{{item.time}}，{{item.duration}}，记录这次运动">
         <view class="card-copy">
           <view class="activity-title serif">{{item.name}}</view>
           <view class="activity-time serif">{{item.time}}</view>
           <view class="activity-duration">{{item.duration}}</view>
         </view>
-        <view class="exercise-art {{item.kind}}-motion" aria-hidden="true">
+        <view wx:if="{{!moodSheetOpen}}" class="exercise-art {{item.kind}}-motion" aria-hidden="true">
           <exercise-motion class="motion-player" id="motion-{{item.kind}}" kind="{{item.kind}}">
             <view wx:if="{{item.kind === 'yoga' && !artFailed.yoga}}" class="yoga-art"><image class="yoga-sheet" src="/assets/week-illustrations.png" mode="scaleToFill" data-kind="yoga" binderror="onArtError" /></view>
             <image wx:if="{{item.kind === 'running' && !artFailed.running}}" class="running-art" src="/assets/today-running.png" mode="aspectFit" data-kind="running" binderror="onArtError" />
@@ -27,7 +27,37 @@
       <button class="status-button" data-index="{{index}}" catchtap="toggleStatus" hover-class="status-pressed" aria-label="{{item.name}}示例状态：{{item.completed ? '已完成' : '未完成'}}，点击切换" aria-pressed="{{item.completed}}">
         <view class="status-circle {{item.completed ? 'is-complete' : ''}}"><view wx:if="{{item.completed}}" class="status-tick"></view></view>
       </button>
+      <button class="before-mood-entry {{item.beforeMood || item.beforeMoodNote ? 'has-mood' : ''}}" data-index="{{index}}" bindtap="openBeforeMood" hover-class="card-pressed" aria-label="{{item.name}}，运动前心情，{{item.beforeMoodLabel || '尚未选择'}}，{{item.beforeMoodNote ? '已写备注' : '未写备注'}}，点击修改">
+        <text>运动前心情</text>
+        <view class="before-mood-value"><text>{{item.beforeMoodLabel || (item.beforeMoodNote ? '已写备注' : '点一下记录')}}{{item.beforeMoodLabel && item.beforeMoodNote ? ' · 有备注' : ''}}</text><view class="mood-chevron" aria-hidden="true"></view></view>
+      </button>
     </view>
   </view>
-  <view class="demo-note">界面示例 · 点选圆点切换状态，不保存记录</view>
+  <navigator class="review-entry" url="/pages/review/index" hover-class="calendar-pressed" aria-label="查看本周回看示例"><text>本周回看</text><view class="review-chevron" aria-hidden="true"></view></navigator>
+  <view class="demo-note">界面示例 · 心情、备注和完成状态不保存</view>
 </view>
+<page-container show="{{moodSheetOpen}}" position="bottom" round="{{true}}" duration="180" bindclickoverlay="closeBeforeMood" bindafterleave="afterMoodLeave">
+  <scroll-view class="mood-sheet-scroll" scroll-y="{{true}}">
+  <view class="before-mood-sheet">
+    <view class="mood-sheet-header">
+      <view class="mood-sheet-title serif" role="heading" aria-level="2">运动前，心情怎么样？</view>
+      <button class="mood-sheet-close" bindtap="closeBeforeMood" hover-class="status-pressed" aria-label="关闭运动前心情选择"><view class="close-mark" aria-hidden="true"></view></button>
+    </view>
+    <view class="mood-sheet-context">{{moodActivityName}} · {{moodActivityTime}}</view>
+    <view class="mood-options" role="group" aria-label="运动前的心情，单选">
+      <button wx:for="{{beforeMoodOptions}}" wx:key="value" class="mood-option {{selectedBeforeMood === item.value ? 'mood-selected' : ''}}" data-value="{{item.value}}" bindtap="selectBeforeMood" hover-class="mood-option-pressed" aria-label="{{item.label}}" aria-pressed="{{selectedBeforeMood === item.value}}">
+        <view class="mood-face face-{{item.value}}" aria-hidden="true"><view class="mood-eyes"></view><view class="mood-mouth"></view></view>
+        <text class="mood-label">{{item.label}}</text>
+      </button>
+    </view>
+    <view class="note-section">
+      <view class="note-heading">想说两句吗？<text class="note-optional">（选填）</text></view>
+      <view class="note-field {{beforeMoodNoteFocused ? 'is-focused' : ''}}">
+        <textarea wx:if="{{moodSheetOpen}}" class="mood-textarea" value="{{beforeMoodNote}}" placeholder="比如：有点累，想出去走走。" placeholder-class="note-placeholder" maxlength="200" cursor-spacing="24" adjust-position="{{true}}" show-confirm-bar="{{true}}" bindinput="inputBeforeMoodNote" bindfocus="focusBeforeMoodNote" bindblur="blurBeforeMoodNote" aria-label="运动前的感受，选填，最多200字" />
+        <view class="note-count">{{beforeMoodNote.length}}/200</view>
+      </view>
+    </view>
+    <button class="primary-button mood-sheet-done" bindtap="confirmBeforeMood" hover-class="button-pressed">完成</button>
+  </view>
+  </scroll-view>
+</page-container>

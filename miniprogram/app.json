@@ -3,7 +3,10 @@
     "pages/home/index",
     "pages/today/index",
     "pages/week/index",
-    "pages/plan-detail/index"
+    "pages/plan-detail/index",
+    "pages/record/index",
+    "pages/mood/index",
+    "pages/review/index"
   ],
   "window": {
     "navigationBarTitleText": "",

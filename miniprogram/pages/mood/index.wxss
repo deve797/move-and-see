@@ -1,0 +1,13 @@
+@import "../../styles/mood.wxss";
+
+.mood-page { min-height: 100vh; padding: 20px 48rpx 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.mood-title { font-size: 64rpx; font-weight: 700; line-height: 1.4; letter-spacing: -0.5px; }
+.mood-description { margin-top: 10px; color: #71746f; font-size: 15px; line-height: 1.7; }
+.mood-options { margin-top: 24px; }
+.mood-page .mood-back { width: 100%; min-height: 44px; margin-top: 20px; border-radius: 22px; background: transparent; color: #50584d; font-size: 15px; line-height: 44px; }
+.back-pressed { background: #f3f4f1; }
+.mood-demo { margin-top: 4px; color: #71746f; font-size: 12px; line-height: 1.7; text-align: center; }
+@media (max-width: 340px) {
+  .mood-page { padding-top: 16px; }
+  .mood-options { margin-top: 20px; }
+}

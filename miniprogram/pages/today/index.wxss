@@ -1,4 +1,5 @@
 @import "../../styles/calendar.wxss";
+@import "../../styles/mood.wxss";
 .today-page { min-height: 100vh; padding: 8px 40rpx 28px; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
 .today-header { display: flex; align-items: center; justify-content: space-between; padding: 0 8rpx; }
 .today-header .brand { align-self: center; }
@@ -26,6 +27,26 @@
 .is-complete { background: #181917; border-color: #181917; }
 .status-tick { width: 11px; height: 6px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: translateY(-2px) rotate(-45deg); }
 .status-pressed { opacity: .55; }
+.today-page .before-mood-entry { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 10px 24px; border-top: 1px solid rgba(80,88,77,.12); border-radius: 0; background: transparent; color: #50584d; font-size: 13px; line-height: 1.6; text-align: left; }
+.before-mood-value { display: flex; align-items: center; gap: 10px; }
+.has-mood .before-mood-value { color: #344c36; font-weight: 600; }
+.mood-chevron { width: 6px; height: 6px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); }
+.before-mood-sheet { padding: 22px 20px 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); background: #fff; }
+.mood-sheet-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mood-sheet-title { font-size: 23px; line-height: 1.4; font-weight: 700; }
+.before-mood-sheet .mood-sheet-close { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; height: 44px; margin-right: -8px; background: transparent; border-radius: 50%; }
+.close-mark { position: relative; width: 16px; height: 16px; }
+.close-mark::before, .close-mark::after { content: ""; position: absolute; left: 7px; top: 0; width: 1.5px; height: 16px; background: #50584d; transform: rotate(45deg); }
+.close-mark::after { transform: rotate(-45deg); }
+.mood-sheet-context { margin-top: 4px; color: #686d65; font-size: 14px; line-height: 1.6; }
+.mood-sheet-scroll { height: calc(466px + env(safe-area-inset-bottom)); max-height: calc(100vh - 24px); }
+.before-mood-sheet .mood-options { margin-top: 20px; }
+.before-mood-sheet .note-section { margin-top: 20px; }
+.before-mood-sheet .note-field { margin-top: 10px; padding: 12px; }
+.before-mood-sheet .mood-textarea { height: 64px; }
+.before-mood-sheet .mood-sheet-done { width: 100%; min-height: 48px; margin-top: 16px; border-radius: 24px; font-size: 16px; line-height: 1.5; }
+.review-entry { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin: 16px 8rpx 0; color: #50584d; font-size: 16px; }
+.review-chevron { width: 8px; height: 8px; margin-right: 3px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); }
 .demo-note { margin: 20px 8rpx 0; font-size: 12px; color: #71746f; line-height: 1.7; }
 @media (max-width: 340px) {
   .today-intro { margin-top: 22px; margin-bottom: 20px; }
@@ -37,4 +58,7 @@
   .running-art { width: 197px; height: 197px; }
   .exercise-art { width: 197px; height: 197px; }
   .yoga-motion { width: 190px; height: 190px; }
+  .today-page .before-mood-entry { padding-right: 20px; padding-left: 20px; }
+  .before-mood-sheet { padding-right: 16px; padding-left: 16px; }
+  .mood-sheet-title { font-size: 20px; }
 }
