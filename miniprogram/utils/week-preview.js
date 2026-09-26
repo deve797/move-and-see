@@ -9,31 +9,31 @@ const samples = [
   { weekday: '周日', name: '休息一下', duration: '', tone: 'rest', col: 2, row: 1 }
 ];
 function dateKey(date) {
-  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+  return date.toISOString().slice(0, 10);
 }
+// 日期选择器的值是北京时间日期，使用 UTC 日历运算，避免设备时区影响。
 function parseDate(value) {
-  const parts = value.split('-').map(Number);
-  return new Date(parts[0], parts[1] - 1, parts[2], 12);
+  return new Date(value + 'T00:00:00Z');
 }
 function monday(date) {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
-  start.setDate(start.getDate() - (start.getDay() + 6) % 7);
+  const start = new Date(date);
+  start.setUTCDate(start.getUTCDate() - (start.getUTCDay() + 6) % 7);
   return start;
 }
 function nextMonday(now) {
-  const start = monday(now);
-  start.setDate(start.getDate() + 7);
+  const start = parseDate(currentMonday(now));
+  start.setUTCDate(start.getUTCDate() + 7);
   return dateKey(start);
 }
 function currentMonday(now) {
-  return dateKey(monday(now));
+  return dateKey(monday(new Date(now.getTime() + 8 * 60 * 60 * 1000)));
 }
 function weekPreview(value, now) {
   const start = monday(parseDate(value));
   const days = samples.map((sample, index) => {
     const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return Object.assign({}, sample, { id: index, date: dateKey(date), shortDate: (date.getMonth() + 1) + '/' + date.getDate() });
+    date.setUTCDate(start.getUTCDate() + index);
+    return Object.assign({}, sample, { id: index, date: dateKey(date), shortDate: (date.getUTCMonth() + 1) + '/' + date.getUTCDate() });
   });
   const key = dateKey(start);
   const isCurrentWeek = key === currentMonday(now);

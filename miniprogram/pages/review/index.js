@@ -1,25 +1,84 @@
+const weeklyProgress = require('../../utils/weekly-progress');
+const fourWeekProgress = require('../../utils/four-week-progress');
+const moods = require('../../utils/mood-options');
 Page({
-  // 概念图中的固定示例，不读取或统计真实运动记录。
   data: {
-    weeks: [
-      { label: '第1周', count: 2 },
-      { label: '第2周', count: 3 },
-      { label: '第3周', count: 4 },
-      { label: '第4周', count: 5 }
-    ],
-    thisWeekCount: 5,
-    moreThanLastWeek: 1,
-    betterMoodCount: 3,
+    weeklyProgress: { completed: 0, total: 0 }, resultGroups: [], hasResults: false, reasonGroups: [],
+    moodComparison: { improved: 0, same: 0, declined: 0, total: 0 },
+    weeks: [],
     moodNotesExpanded: false,
-    moodTextSummary: '这周的文字里，运动前提到过“有点累”“不太想出门”；运动后写下了“轻松了一些”“脑袋清楚了”。也有一次，运动后仍然觉得“还是有点累”。',
-    // 与上方文字总结对应的虚构原话，仅用于展示展开形式。
-    moodNotes: [
-      { id: 'mon-yoga', date: '9月21日 · 周一', activity: '瑜伽', before: '今天有点累，想先慢慢活动。', after: '做完伸展，身体轻松了一些。' },
-      { id: 'tue-running', date: '9月22日 · 周二', activity: '跑步', before: '下班后不太想出门，先走一会儿看看。', after: '吹了风，脑袋清楚了。' },
-      { id: 'thu-strength', date: '9月24日 · 周四', activity: '力量训练', before: '今天状态一般，按自己的节奏练。', after: '练完感觉不错，心情也松了一点。' },
-      { id: 'fri-walking', date: '9月25日 · 周五', activity: '散步', before: '', after: '走完还是有点累，今晚想早点休息。' }
-    ],
+    moodNotes: [],
     artFailed: false
+  },
+  onShow() {
+    const date = new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const data = getApp().globalData;
+    const plans = weeklyProgress.getWeekPlans(data.plans, {}, date)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime) || a.id - b.id);
+    const resultGroups = [
+      { key: 'completed', label: '按计划完成', plans: [] },
+      { key: 'replacement', label: '替代完成', plans: [] },
+      { key: 'makeup', label: '补做', plans: [] },
+      { key: 'incomplete', label: '仍未完成', plans: [] }
+    ];
+    const reasonGroups = [];
+    plans.forEach(plan => {
+      if (!plan.result) return;
+      if (plan.result.status === 'incomplete' && plan.result.reason) {
+        let reasonGroup = reasonGroups.find(item => item.reason === plan.result.reason);
+        if (!reasonGroup) {
+          reasonGroup = { reason: plan.result.reason, count: 0, makeupCount: 0 };
+          reasonGroups.push(reasonGroup);
+        }
+        reasonGroup.count += 1;
+        if (plan.result.makeup) reasonGroup.makeupCount += 1;
+      }
+      if ((data.periodDays || {})[plan.date] === true) return;
+      const key = plan.result.status === 'incomplete' && plan.result.makeup ? 'makeup' : plan.result.status;
+      const group = resultGroups.find(item => item.key === key);
+      if (group) group.plans.push(plan);
+    });
+    const moodComparison = { improved: 0, same: 0, declined: 0, total: 0 };
+    // 沿用原计划周范围；免考核不影响实际运动的心情比较。
+    weeklyProgress.getWeekPlans(data.plans, {}, date).forEach(plan => {
+      const result = plan.result;
+      if (!result) return;
+      const motion = result.status === 'incomplete' ? result.makeup : ['completed', 'replacement'].includes(result.status) ? result : null;
+      if (!motion) return;
+      // 替代和补做只取实际运动自身的感受，不与原计划的心情拼接。
+      const beforeMood = result.status === 'completed' ? plan.beforeMood : motion.beforeMood;
+      const before = moods.findIndex(item => item.value === beforeMood);
+      const after = moods.findIndex(item => item.value === motion.afterMood);
+      if (before < 0 || after < 0) return;
+      moodComparison[after > before ? 'improved' : after === before ? 'same' : 'declined'] += 1;
+      moodComparison.total += 1;
+    });
+    const moodNotes = [];
+    plans.forEach(plan => {
+      const result = plan.result;
+      const before = plan.beforeMoodNote || '';
+      const after = result && result.status === 'completed' ? result.afterMoodNote || '' : '';
+      if (before || after) moodNotes.push({
+        id: plan.id + '-plan', date: plan.date, startTime: plan.startTime,
+        activity: plan.activity, context: '原计划 · ' + plan.startTime, before, after
+      });
+      // 原计划前备注不与替代或补做的实际运动拼接。
+      const motion = result && (result.status === 'incomplete' ? result.makeup : result.status === 'replacement' ? result : null);
+      if (!motion || (!motion.beforeMoodNote && !motion.afterMoodNote)) return;
+      const isMakeup = result.status === 'incomplete';
+      moodNotes.push({
+        id: plan.id + '-motion', date: isMakeup ? motion.date : plan.date,
+        startTime: isMakeup ? '' : plan.startTime, activity: motion.actualActivity,
+        context: (isMakeup ? '补做' : '替代完成') + ' · 原计划 ' + plan.date + ' ' + plan.startTime + ' ' + plan.activity,
+        before: motion.beforeMoodNote || '', after: motion.afterMoodNote || ''
+      });
+    });
+    moodNotes.sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime) || a.id.localeCompare(b.id));
+    this.setData({
+      weeklyProgress: weeklyProgress(data.plans, data.periodDays || {}, date),
+      weeks: fourWeekProgress(data.plans, data.periodDays || {}, date),
+      resultGroups, hasResults: resultGroups.some(group => group.plans.length > 0), reasonGroups, moodComparison, moodNotes
+    });
   },
   onArtError() { this.setData({ artFailed: true }); },
   toggleMoodNotes() {

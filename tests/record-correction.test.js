@@ -4,8 +4,9 @@ const vm = require('node:vm');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 
+let now = '2026-09-26T04:00:00Z';
 class FixedDate extends Date {
-  constructor(...args) { super(...(args.length ? args : ['2026-09-26T04:00:00Z'])); }
+  constructor(...args) { super(...(args.length ? args : [now])); }
 }
 const app = { globalData: { plans: [
   { id: 1, date: '2026-09-26', activity: '跑步', startTime: '07:00', result: { status: 'completed' } },
@@ -139,3 +140,76 @@ assert.equal(today.data.activities.find(item => item.id === 1).result.status, 'c
 assert.equal(today.data.activities.find(item => item.id === 1).result.reason, undefined);
 assert.equal(week.data.days.flatMap(day => day.plans).find(item => item.id === 1).result.reason, undefined);
 console.log('PASS: reason required, draft isolation, correction both ways, clear old reason, discard/back, stable plan fields/count, other-plan isolation, repeat confirmation, invalid/cancelled guards, list refresh');
+
+const setPeriod = marked => today.setPeriod({ currentTarget: { dataset: { marked } } });
+setPeriod(true);
+const markedResults = snapshot();
+const withReason = mount('record', 2);
+assert.equal(withReason.data.canCorrect, true, '免考核不锁死已有结果的修正');
+withReason.startCorrection();
+assert.equal(withReason.data.correctionReason, '下雨');
+const originalResult = app.globalData.plans[1].result;
+withReason.confirmCorrection();
+assert.equal(app.globalData.plans[1].result, originalResult);
+withReason.startCorrection();
+chooseStatus(withReason, 'completed');
+withReason.cancelCorrection();
+assert.equal(snapshot(), markedResults, '原样确认和放弃修正都保留原原因');
+
+const exempt = mount('record', 1);
+exempt.startCorrection();
+chooseStatus(exempt, 'incomplete');
+assert.equal(exempt.data.canConfirmCorrection, true, '免考核修正未完成无需原因');
+assert.equal(snapshot(), markedResults, '选择正确结果仍只更新草稿');
+exempt.setData({ correctionReason: '无效原因' });
+exempt.confirmCorrection();
+assert.equal(snapshot(), markedResults, '免填原因不代表接受非法原因');
+exempt.setData({ correctionReason: '' });
+exempt.confirmCorrection();
+assert.equal(app.globalData.plans[0].result.status, 'incomplete');
+assert.equal(app.globalData.plans[0].result.reason, '');
+const reasonFreeResult = app.globalData.plans[0].result;
+exempt.confirmCorrection();
+assert.equal(app.globalData.plans[0].result, reasonFreeResult);
+exempt.startCorrection();
+assert.equal(exempt.data.canConfirmCorrection, true);
+exempt.confirmCorrection();
+assert.equal(app.globalData.plans[0].result, reasonFreeResult, '原样确认不重建无原因结果');
+
+exempt.startCorrection();
+chooseStatus(exempt, 'completed');
+setPeriod(false);
+exempt.confirmCorrection();
+assert.equal(app.globalData.plans[0].result, reasonFreeResult, '取消免考核后拒绝此前打开的修正草稿');
+assert.equal(exempt.data.correcting, false);
+assert.equal(exempt.data.periodExempt, false);
+exempt.startCorrection();
+assert.equal(exempt.data.canConfirmCorrection, false, '普通未完成记录重新修正仍要求原因');
+exempt.confirmCorrection();
+assert.equal(app.globalData.plans[0].result, reasonFreeResult);
+chooseReason(exempt, '加班');
+setPeriod(true);
+exempt.confirmCorrection();
+assert.equal(app.globalData.plans[0].result, reasonFreeResult, '标记免考核后也拒绝原普通修正草稿');
+assert.equal(exempt.data.correcting, false);
+
+now = '2026-09-26T16:00:00Z'; // 北京时间次日，同一次运行中重新打开昨天的记录。
+today.onShow();
+const historical = mount('record', 1);
+assert.equal(historical.data.periodExempt, true);
+assert.equal(historical.data.canCorrect, true);
+historical.startCorrection();
+chooseStatus(historical, 'completed');
+historical.confirmCorrection();
+assert.equal(app.globalData.plans[0].result.status, 'completed');
+historical.startCorrection();
+chooseStatus(historical, 'incomplete');
+assert.equal(historical.data.canConfirmCorrection, true);
+historical.confirmCorrection();
+assert.equal(app.globalData.plans[0].result.status, 'incomplete');
+assert.equal(app.globalData.plans[0].result.reason, '');
+assert.equal(app.globalData.periodDays['2026-09-26'], true);
+assert.equal(JSON.stringify(planFields()), originalFields);
+assert.equal(app.globalData.plans[1].result, originalResult, '只修正指定计划');
+assert.equal(mount('review').data.reasonGroups.some(group => !group.reason), false, '无原因不生成虚构原因组');
+console.log('PASS: period-exempt correction across Beijing midnight, optional reasons, unchanged/discarded results, two-way stale marker guards and normal reason validation');

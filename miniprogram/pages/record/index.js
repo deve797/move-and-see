@@ -20,6 +20,9 @@ function runningError(values) {
   }
   return '';
 }
+function isPeriodExempt(plan) {
+  return Boolean(plan && !plan.cancelled && (getApp().globalData.periodDays || {})[plan.date] === true);
+}
 function canCorrect(plan) {
   return Boolean(plan && !plan.cancelled && plan.result && !plan.result.makeup && ['completed', 'incomplete'].includes(plan.result.status));
 }
@@ -36,7 +39,7 @@ function validMakeupDate(value, planDate) {
 }
 Page({
   data: {
-    plan: null, completed: false, canComplete: false, artFailed: false,
+    plan: null, completed: false, canComplete: false, artFailed: false, periodExempt: false,
     incomplete: false, recordingIncomplete: false, selectedReason: '', canConfirmIncomplete: false,
     replacement: false, recordingReplacement: false, actualActivity: '', canConfirmReplacement: false,
     makeup: null, canMakeup: false, recordingMakeup: false, makeupDate: '', makeupActivity: '',
@@ -61,6 +64,7 @@ Page({
     const runningData = runningValues(plan && plan.activity === '跑步' && plan.result && plan.result.status === 'completed' ? plan.result.runningData : undefined);
     this.setData({
       plan: plan ? { id: plan.id, activity: plan.activity, date: plan.date, startTime: plan.startTime, result: plan.result || null } : null,
+      periodExempt: isPeriodExempt(plan),
       completed: Boolean(plan && plan.result && plan.result.status === 'completed'),
       replacement: Boolean(plan && plan.result && plan.result.status === 'replacement'),
       makeup, canMakeup: canMakeup(plan), recordingMakeup: false, makeupDate: '', makeupActivity: '',
@@ -73,7 +77,7 @@ Page({
       runningPace: formatRunningPace(runningData.durationMinutes, runningData.distanceKm),
       runningError: '',
       incomplete: Boolean(plan && plan.result && plan.result.status === 'incomplete'),
-      selectedReason: plan && plan.result && plan.result.status === 'incomplete' ? plan.result.reason : '',
+      selectedReason: plan && plan.result && plan.result.status === 'incomplete' ? plan.result.reason || '' : '',
       recordingIncomplete: false, canConfirmIncomplete: false,
       canCorrect: canCorrect(plan), correcting: false, correctionStatus: '', correctionReason: '', canConfirmCorrection: false
     });
@@ -119,17 +123,17 @@ Page({
     this.refreshPlan();
     if (!this.data.canCorrect) return;
     const result = this.data.plan.result;
-    const reason = result.status === 'incomplete' ? result.reason : '';
+    const reason = result.status === 'incomplete' ? result.reason || '' : '';
     this.setData({
       correcting: true, correctionStatus: result.status, correctionReason: reason,
-      canConfirmCorrection: result.status === 'completed' || this.data.reasonOptions.includes(reason)
+      canConfirmCorrection: result.status === 'completed' || this.data.periodExempt || this.data.reasonOptions.includes(reason)
     });
     wx.pageScrollTo({ scrollTop: 0, duration: 0 });
   },
   selectCorrectionStatus(event) {
     const status = event.currentTarget.dataset.status;
     if (!this.data.correcting || !['completed', 'incomplete'].includes(status) || status === this.data.correctionStatus) return;
-    this.setData({ correctionStatus: status, correctionReason: '', canConfirmCorrection: status === 'completed' });
+    this.setData({ correctionStatus: status, correctionReason: '', canConfirmCorrection: status === 'completed' || this.data.periodExempt });
   },
   selectCorrectionReason(event) {
     const reason = event.currentTarget.dataset.reason;
@@ -140,13 +144,13 @@ Page({
   confirmCorrection() {
     if (!this.data.correcting) return;
     const plan = getApp().globalData.plans.find(item => item.id === this.planId);
-    if (!canCorrect(plan)) {
+    if (!canCorrect(plan) || isPeriodExempt(plan) !== this.data.periodExempt) {
       this.refreshPlan();
       return;
     }
     const status = this.data.correctionStatus;
     const reason = this.data.correctionReason;
-    if (status !== 'completed' && !(status === 'incomplete' && this.data.reasonOptions.includes(reason))) return;
+    if (status !== 'completed' && !(status === 'incomplete' && (this.data.reasonOptions.includes(reason) || (isPeriodExempt(plan) && reason === '')))) return;
     if (status !== plan.result.status || (status === 'incomplete' && reason !== plan.result.reason)) {
       plan.result = status === 'completed' ? { status } : { status, reason };
     }
@@ -154,7 +158,7 @@ Page({
   },
   startIncomplete() {
     this.refreshPlan();
-    if (!this.data.canComplete) return;
+    if (!this.data.canComplete || this.data.periodExempt) return;
     this.setData({ recordingIncomplete: true });
   },
   cancelIncomplete() { this.refreshPlan(); },
@@ -164,8 +168,13 @@ Page({
     this.setData({ selectedReason: reason, canConfirmIncomplete: true });
   },
   confirmIncomplete() {
-    if (!this.data.recordingIncomplete || !this.data.reasonOptions.includes(this.data.selectedReason)) return;
+    if (!this.data.recordingIncomplete) return;
     const plan = getApp().globalData.plans.find(item => item.id === this.planId && !item.cancelled);
+    if (isPeriodExempt(plan)) {
+      this.refreshPlan();
+      return;
+    }
+    if (!this.data.reasonOptions.includes(this.data.selectedReason)) return;
     if (plan && !plan.result) plan.result = { status: 'incomplete', reason: this.data.selectedReason };
     this.refreshPlan();
   },

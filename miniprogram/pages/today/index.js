@@ -1,7 +1,9 @@
 const moodOptions = require('../../utils/mood-options');
+const weeklyProgress = require('../../utils/weekly-progress');
 Page({
   data: {
-    activities: [], date: '', artFailed: {},
+    activities: [], date: '', artFailed: {}, periodMarked: false, periodWalk: null,
+    weeklyProgress: { completed: 0, total: 0 },
     moodSheetOpen: false, moodPlanId: null,
     moodActivityName: '', moodActivityTime: '', selectedBeforeMood: '',
     beforeMoodNote: '', beforeMoodNoteFocused: false,
@@ -9,13 +11,14 @@ Page({
   },
   onShow() {
     const date = new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const periodMarked = (getApp().globalData.periodDays || {})[date] === true;
     const activities = getApp().globalData.plans
       .filter(plan => plan.date === date && !plan.cancelled)
       .sort((a, b) => a.startTime.localeCompare(b.startTime) || a.id - b.id)
       .map(plan => {
         const option = moodOptions.find(item => item.value === plan.beforeMood);
         return {
-          id: plan.id, name: plan.activity, time: plan.startTime,
+          id: plan.id, name: plan.activity, time: plan.startTime, periodExempt: periodMarked,
           completed: Boolean(plan.result && (['completed', 'replacement'].includes(plan.result.status) || (plan.result.status === 'incomplete' && plan.result.makeup))),
           result: plan.result || null,
           kind: plan.activity === '瑜伽' ? 'yoga' : plan.activity === '跑步' ? 'running' : '',
@@ -24,10 +27,46 @@ Page({
         };
       });
     this.setData({
-      date, activities, moodSheetOpen: false, moodPlanId: null,
+      date, activities, periodMarked,
+      weeklyProgress: weeklyProgress(getApp().globalData.plans, getApp().globalData.periodDays || {}, date),
+      periodWalk: periodMarked ? (getApp().globalData.periodWalks || {})[date] || null : null,
+      moodSheetOpen: false, moodPlanId: null,
       moodActivityName: '', moodActivityTime: '', selectedBeforeMood: '',
       beforeMoodNote: '', beforeMoodNoteFocused: false
     });
+  },
+  setPeriod(event) {
+    const date = new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (date !== this.data.date) {
+      this.onShow();
+      return;
+    }
+    const marked = event.currentTarget.dataset.marked;
+    if (typeof marked !== 'boolean') return;
+    const data = getApp().globalData;
+    const days = data.periodDays || (data.periodDays = {});
+    if (marked) days[date] = true;
+    else delete days[date];
+    this.onShow();
+  },
+  choosePeriodWalk() {
+    const date = new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const data = getApp().globalData;
+    if (date === this.data.date && (data.periodDays || {})[date] === true) {
+      const walks = data.periodWalks || (data.periodWalks = {});
+      if (!walks[date]) walks[date] = { status: 'pending' };
+    }
+    this.onShow();
+  },
+  recordPeriodWalk(event) {
+    const date = new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const data = getApp().globalData;
+    const walk = (data.periodWalks || {})[date];
+    const status = event.currentTarget.dataset.status;
+    if (date === this.data.date && (data.periodDays || {})[date] === true && walk && ['completed', 'incomplete'].includes(status)) {
+      walk.status = status;
+    }
+    this.onShow();
   },
   openBeforeMood(event) {
     if (this.data.moodPlanId !== null) return;

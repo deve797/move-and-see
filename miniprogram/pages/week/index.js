@@ -25,7 +25,8 @@ Page({
     preview.days = preview.days.map(day => Object.assign({}, day, {
       plans: this._plans.filter(plan => plan.date === day.date && !plan.cancelled).map(plan => Object.assign({}, plan, {
         editable: canEdit(plan, now),
-        pendingRecord: !plan.result && !isFuture(plan, now)
+        periodExempt: (getApp().globalData.periodDays || {})[plan.date] === true,
+        pendingRecord: !plan.result && !isFuture(plan, now) && (getApp().globalData.periodDays || {})[plan.date] !== true
       }))
     }));
     this.setData(preview);

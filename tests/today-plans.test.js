@@ -80,4 +80,47 @@ now = '2026-09-27T16:00:00Z';
 today.onShow();
 assert.deepEqual(shown(today), []);
 assert.deepEqual(shown(mount('today', runtime())), []); // 新运行不持久化。
+
+// 同一瞬间切换设备时区，今天与本周仍以北京时间为准。
+const originalTimezone = process.env.TZ;
+try {
+  for (const timezone of ['Asia/Shanghai', 'America/Los_Angeles', 'UTC', 'Pacific/Kiritimati']) {
+    process.env.TZ = timezone;
+    const cases = [
+      ['2026-09-27T15:59:59Z', '2026-09-27', '2026-09-21', '2026-09-28'],
+      ['2026-09-27T16:00:00Z', '2026-09-28', '2026-09-28', '2026-10-05'],
+      ['2026-12-31T16:00:00Z', '2027-01-01', '2026-12-28', '2027-01-04'],
+      ['2027-01-03T16:00:00Z', '2027-01-04', '2027-01-04', '2027-01-11']
+    ];
+    for (const [instant, date, monday, nextMonday] of cases) {
+      now = instant;
+      const context = timezone + ' / ' + instant;
+      const boundaryApp = runtime();
+      const boundaryWeek = mount('week', boundaryApp);
+      assert.equal(boundaryWeek.data.selectedDate, monday, context);
+      assert.equal(boundaryWeek.data.title, '本周计划', context);
+      add(boundaryWeek, date, '跑步', '19:00');
+      const boundaryToday = mount('today', boundaryApp);
+      assert.equal(boundaryToday.data.date, date, context);
+      assert.deepEqual(shown(boundaryToday), [[1, '跑步', '19:00']], context);
+      const openedWeek = mount('week', boundaryApp);
+      const planIds = () => openedWeek.data.days.flatMap(day => day.plans.map(plan => plan.id));
+      assert.equal(openedWeek.data.selectedDate, monday, context);
+      assert.equal(openedWeek.data.days.length, 7, context);
+      assert.deepEqual(planIds(), [1], context);
+      openedWeek.showNextWeek();
+      assert.equal(openedWeek.data.selectedDate, nextMonday, context);
+      assert.equal(openedWeek.data.isNextWeek, true, context);
+      assert.deepEqual(planIds(), [], context);
+      openedWeek.showCurrentWeek();
+      assert.equal(openedWeek.data.selectedDate, monday, context);
+      assert.equal(openedWeek.data.isCurrentWeek, true, context);
+      assert.deepEqual(planIds(), [1], context);
+    }
+  }
+} finally {
+  if (originalTimezone === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTimezone;
+}
 console.log('PASS: empty state data, today-only sorted plans, no invented duration/result, shared navigation, edits/cancellation, Beijing midnight, fresh runtime');
+console.log('PASS: today/week agreement across four device timezones, Beijing Sunday/Monday boundary, year boundary and week navigation');

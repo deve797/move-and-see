@@ -1,1 +1,1 @@
-App({ globalData: { plans: [] } });
+App({ globalData: { plans: [], periodDays: {}, periodWalks: {} } });

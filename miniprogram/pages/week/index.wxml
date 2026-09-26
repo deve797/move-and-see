@@ -40,11 +40,13 @@
     <view wx:for="{{item.plans}}" wx:for-item="plan" wx:key="id" class="added-plan" aria-label="{{plan.date}}，我添加的，{{plan.startTime}}，{{plan.activity}}，临时安排">
       <text class="added-label">我添加的 · 临时</text>
       <view class="added-content"><text class="added-time">{{plan.startTime}}</text><text>{{plan.activity}}</text></view>
-      <navigator id="record-plan-{{plan.id}}" class="plan-record" url="/pages/record/index?planId={{plan.id}}" hover-class="day-pressed" aria-label="{{plan.date}} {{plan.startTime}}的{{plan.activity}}，{{plan.result.makeup ? '已补做，' + plan.result.makeup.date + '，实际' + plan.result.makeup.actualActivity + '，查看结果' : plan.result.status === 'replacement' ? '替代完成，实际' + plan.result.actualActivity + '，查看结果' : plan.result.status === 'completed' ? '已完成，查看结果' : plan.result.status === 'incomplete' ? '未完成，' + plan.result.reason + '，查看结果' : plan.pendingRecord ? '待补记录，点击记录结果' : '记录结果'}}">
+      <view wx:if="{{plan.periodExempt}}" class="period-badge" role="status">生理期免考核</view>
+      <navigator id="record-plan-{{plan.id}}" class="plan-record" url="/pages/record/index?planId={{plan.id}}" hover-class="day-pressed" aria-label="{{plan.date}} {{plan.startTime}}的{{plan.activity}}，{{plan.periodExempt ? '生理期免考核，' : ''}}{{plan.result.makeup ? '已补做，' + plan.result.makeup.date + '，实际' + plan.result.makeup.actualActivity + '，查看结果' : plan.result.status === 'replacement' ? '替代完成，实际' + plan.result.actualActivity + '，查看结果' : plan.result.status === 'completed' ? '已完成，查看结果' : plan.result.status === 'incomplete' ? '未完成' + (plan.result.reason ? '，' + plan.result.reason : '') + '，查看结果' : plan.periodExempt ? '查看原安排，可不记录' : plan.pendingRecord ? '待补记录，点击记录结果' : '记录结果'}}">
         <text wx:if="{{plan.result.makeup}}">已补做 · {{plan.result.makeup.date}} · 实际{{plan.result.makeup.actualActivity}} · 查看结果</text>
         <text wx:elif="{{plan.result.status === 'replacement'}}">替代完成 · 实际{{plan.result.actualActivity}} · 查看结果</text>
         <text wx:elif="{{plan.result.status === 'completed'}}">已完成 · 查看结果</text>
-        <text wx:elif="{{plan.result.status === 'incomplete'}}">未完成 · {{plan.result.reason}} · 查看结果</text>
+        <text wx:elif="{{plan.result.status === 'incomplete'}}">未完成{{plan.result.reason ? ' · ' + plan.result.reason : ''}} · 查看结果</text>
+        <text wx:elif="{{plan.periodExempt}}">查看原安排 · 可不记录</text>
         <text wx:elif="{{plan.pendingRecord}}">待补记录</text>
         <text wx:else>记录结果</text>
       </navigator>
@@ -57,5 +59,5 @@
     <button wx:if="{{!isNextWeek}}" class="week-next primary-button" bindtap="showNextWeek" hover-class="button-pressed" aria-label="安排下周，切换到下周计划示例">安排下周</button>
     <button wx:if="{{!isCurrentWeek}}" class="week-current" bindtap="showCurrentWeek" hover-class="day-pressed">查看本周计划</button>
   </view>
-  <view class="demo-note">“固定示例”仅供展示。已到开始时间且没有结果的安排显示“待补记录”，可点击补录。安排和结果仅在本次运行内临时保留，关闭重开不保留。</view>
+  <view class="demo-note">“固定示例”仅供展示。已到开始时间且没有结果的非免考核安排显示“待补记录”，可点击补录。安排、结果和生理期标记仅在本次运行内临时保留，关闭重开不保留。</view>
 </view>
