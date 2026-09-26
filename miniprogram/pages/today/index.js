@@ -1,25 +1,40 @@
-const examples = require('../../utils/today-preview');
 const moodOptions = require('../../utils/mood-options');
 Page({
   data: {
     activities: [], date: '', artFailed: {},
-    moodSheetOpen: false, moodActivityIndex: -1,
+    moodSheetOpen: false, moodPlanId: null,
     moodActivityName: '', moodActivityTime: '', selectedBeforeMood: '',
     beforeMoodNote: '', beforeMoodNoteFocused: false,
     beforeMoodOptions: moodOptions
   },
-  onLoad() {
-    const now = new Date();
-    const date = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
-    this.setData({ date, activities: examples.map(item => Object.assign({}, item, { beforeMood: '', beforeMoodLabel: '', beforeMoodNote: '' })) });
+  onShow() {
+    const date = new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const activities = getApp().globalData.plans
+      .filter(plan => plan.date === date && !plan.cancelled)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime) || a.id - b.id)
+      .map(plan => {
+        const option = moodOptions.find(item => item.value === plan.beforeMood);
+        return {
+          id: plan.id, name: plan.activity, time: plan.startTime,
+          completed: Boolean(plan.result && (['completed', 'replacement'].includes(plan.result.status) || (plan.result.status === 'incomplete' && plan.result.makeup))),
+          result: plan.result || null,
+          kind: plan.activity === '瑜伽' ? 'yoga' : plan.activity === '跑步' ? 'running' : '',
+          beforeMood: option ? option.value : '', beforeMoodLabel: option ? option.label : '',
+          beforeMoodNote: plan.beforeMoodNote || ''
+        };
+      });
+    this.setData({
+      date, activities, moodSheetOpen: false, moodPlanId: null,
+      moodActivityName: '', moodActivityTime: '', selectedBeforeMood: '',
+      beforeMoodNote: '', beforeMoodNoteFocused: false
+    });
   },
   openBeforeMood(event) {
-    if (this.data.moodActivityIndex !== -1) return;
-    const index = Number(event.currentTarget.dataset.index);
-    const activity = this.data.activities[index];
-    if (!Number.isInteger(index) || !activity) return;
+    if (this.data.moodPlanId !== null) return;
+    const activity = this.data.activities.find(item => item.id === Number(event.currentTarget.dataset.id));
+    if (!activity) return;
     this.setData({
-      moodSheetOpen: true, moodActivityIndex: index,
+      moodSheetOpen: true, moodPlanId: activity.id,
       moodActivityName: activity.name, moodActivityTime: activity.time,
       selectedBeforeMood: activity.beforeMood,
       beforeMoodNote: activity.beforeMoodNote, beforeMoodNoteFocused: false
@@ -42,12 +57,19 @@ Page({
   },
   confirmBeforeMood() {
     if (!this.data.moodSheetOpen) return;
+    const plan = getApp().globalData.plans.find(item => item.id === this.data.moodPlanId && !item.cancelled);
+    if (!plan) {
+      this.closeBeforeMood();
+      return;
+    }
     const option = this.data.beforeMoodOptions.find(item => item.value === this.data.selectedBeforeMood);
-    const key = 'activities[' + this.data.moodActivityIndex + ']';
+    plan.beforeMood = option ? option.value : '';
+    plan.beforeMoodNote = this.data.beforeMoodNote;
     this.setData({
-      [key + '.beforeMood']: option ? option.value : '',
-      [key + '.beforeMoodLabel']: option ? option.label : '',
-      [key + '.beforeMoodNote']: this.data.beforeMoodNote.trim(),
+      activities: this.data.activities.map(item => item.id === plan.id ? Object.assign({}, item, {
+        beforeMood: plan.beforeMood, beforeMoodLabel: option ? option.label : '',
+        beforeMoodNote: plan.beforeMoodNote
+      }) : item),
       moodSheetOpen: false, beforeMoodNoteFocused: false
     });
   },
@@ -55,11 +77,7 @@ Page({
     this.setData({ moodSheetOpen: false, beforeMoodNoteFocused: false });
   },
   afterMoodLeave() {
-    this.setData({ moodSheetOpen: false, moodActivityIndex: -1, beforeMoodNoteFocused: false });
-  },
-  toggleStatus(event) {
-    const index = Number(event.currentTarget.dataset.index);
-    this.setData({ ['activities[' + index + '].completed']: !this.data.activities[index].completed });
+    this.setData({ moodSheetOpen: false, moodPlanId: null, beforeMoodNoteFocused: false });
   },
   onArtError(event) {
     this.setData({ ['artFailed.' + event.currentTarget.dataset.kind]: true });

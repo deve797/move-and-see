@@ -1,5 +1,5 @@
 <view class="home">
-  <view class="brand serif">向前动</view>
+  <view class="brand serif">Move&See</view>
   <view class="intro">
     <view class="headline serif" role="heading" aria-level="1">今天想怎么动？</view>
     <view class="description">跑两步也好，伸个懒腰也好。<text class="description-line">照自己的节奏来。</text></view>

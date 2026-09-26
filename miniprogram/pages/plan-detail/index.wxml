@@ -1,5 +1,5 @@
 <view class="detail-page">
-  <view class="brand serif">向前动</view>
+  <view class="brand serif">Move&See</view>
   <view class="detail-content">
     <view class="detail-title serif" role="heading" aria-level="1">{{activity ? activity.name : '安排详情'}}</view>
     <view wx:if="{{activity}}" class="detail-date">{{date}} {{activity.weekday || ''}}<text wx:if="{{activity.time}}"> · {{activity.time}}</text><text wx:if="{{activity.duration}}"> · {{activity.duration}}</text></view>

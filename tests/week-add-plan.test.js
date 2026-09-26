@@ -9,10 +9,11 @@ const source = fs.readFileSync(file, 'utf8');
 class FixedDate extends Date {
   constructor(...args) { super(...(args.length ? args : ['2026-09-26T12:00:00+08:00'])); }
 }
-function mount() {
+const app = { globalData: { plans: [] } };
+function mount(runtime = app) {
   let definition;
   vm.runInNewContext(source, {
-    require: createRequire(file), Date: FixedDate,
+    require: createRequire(file), Date: FixedDate, getApp: () => runtime,
     Page(value) { definition = value; }, wx: { pageScrollTo() {} }
   });
   const page = Object.assign({}, definition, {
@@ -85,5 +86,8 @@ page.selectStartTime(event('20:00'));
 page.confirmAdding();
 assert.equal(plans(page).length, 2); // 同一天可安排两项。
 assert.equal(new Set(plans(page).map(plan => plan.id)).size, 2);
-assert.equal(plans(mount()).length, 0); // 离开后重新创建页面不持久化。
-console.log('PASS: required fields, cancel, next Tuesday 19:00 run, week isolation, year boundary, multiple plans, duplicate confirm, no persistence');
+const reopened = mount();
+reopened.showNextWeek();
+assert.equal(plans(reopened).length, 2); // 切片 4：同次运行内跨页共享。
+assert.equal(mount({ globalData: { plans: [] } })._plans.length, 0); // 新运行无持久化。
+console.log('PASS: required fields, cancel, next Tuesday 19:00 run, week isolation, year boundary, multiple plans, duplicate confirm, runtime-only shared plans');

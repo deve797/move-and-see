@@ -1,5 +1,5 @@
 <view class="review-page">
-  <view class="review-header"><view class="brand serif">向前动</view></view>
+  <view class="review-header"><view class="brand serif">Move&See</view></view>
   <view class="review-intro">
     <view class="review-title serif" role="heading" aria-level="1">本周回看</view>
     <view class="review-description">这周怎么动的？翻翻看。</view>

@@ -1,6 +1,6 @@
 <view class="week-page">
   <view class="week-header">
-    <view class="brand serif">向前动</view>
+    <view class="brand serif">Move&See</view>
     <picker wx:if="{{!adding}}" mode="date" value="{{selectedDate}}" bindchange="selectWeek">
       <view class="calendar-button" role="button" aria-label="选择日期，查看所在周">
         <view class="calendar-icon" aria-hidden="true"><view class="calendar-binding"></view><view class="calendar-dot"></view></view>
@@ -13,20 +13,20 @@
     <view class="week-range">{{range}}</view>
   </view>
   <view wx:if="{{adding}}" class="plan-form">
-    <view class="form-title" role="heading" aria-level="2">新增运动安排</view>
+    <view class="form-title" role="heading" aria-level="2">{{editingId !== null ? '修改运动安排' : '新增运动安排'}}</view>
     <view class="form-hint">选择日期、项目和开始时间。</view>
     <picker id="plan-date" mode="date" value="{{draft.date}}" bindchange="selectPlanDate">
       <view class="form-field" role="button" aria-label="日期，{{draft.date}}，点击选择"><text class="field-label">日期</text><text>{{draft.date}}</text></view>
     </picker>
-    <picker id="plan-activity" mode="selector" range="{{activities}}" bindchange="selectActivity">
+    <picker id="plan-activity" mode="selector" range="{{activities}}" value="{{activityIndex}}" bindchange="selectActivity">
       <view class="form-field" role="button" aria-label="项目，{{draft.activity || '请选择'}}，必填"><text class="field-label">项目</text><text class="{{draft.activity ? '' : 'field-placeholder'}}">{{draft.activity || '请选择项目'}}</text></view>
     </picker>
     <picker id="plan-time" mode="time" value="{{draft.startTime}}" bindchange="selectStartTime">
       <view class="form-field" role="button" aria-label="开始时间，{{draft.startTime || '请选择'}}，必填"><text class="field-label">开始时间</text><text class="{{draft.startTime ? '' : 'field-placeholder'}}">{{draft.startTime || '请选择时间'}}</text></view>
     </picker>
-    <view class="form-hint">{{canConfirm ? '确认后会显示在对应日期。' : '选好项目和开始时间后，即可确认添加。'}}</view>
-    <button class="plan-confirm primary-button" disabled="{{!canConfirm}}" bindtap="confirmAdding" hover-class="button-pressed">确认添加</button>
-    <button class="plan-cancel" bindtap="cancelAdding" hover-class="day-pressed">取消填写</button>
+    <view class="form-hint">{{editingId !== null ? '选好项目和未来的开始时间后，可确认修改。' : canConfirm ? '确认后会显示在对应日期。' : '选好项目和开始时间后，即可确认添加。'}}</view>
+    <button class="plan-confirm primary-button" disabled="{{!canConfirm}}" bindtap="confirmAdding" hover-class="button-pressed">{{editingId !== null ? '确认修改' : '确认添加'}}</button>
+    <button class="plan-cancel" bindtap="cancelAdding" hover-class="day-pressed">{{editingId !== null ? '放弃编辑' : '取消填写'}}</button>
   </view>
   <button wx:else class="plan-add primary-button" bindtap="startAdding" hover-class="button-pressed">新增运动安排</button>
   <view wx:if="{{!adding}}" class="week-list">
@@ -40,6 +40,16 @@
     <view wx:for="{{item.plans}}" wx:for-item="plan" wx:key="id" class="added-plan" aria-label="{{plan.date}}，我添加的，{{plan.startTime}}，{{plan.activity}}，临时安排">
       <text class="added-label">我添加的 · 临时</text>
       <view class="added-content"><text class="added-time">{{plan.startTime}}</text><text>{{plan.activity}}</text></view>
+      <navigator id="record-plan-{{plan.id}}" class="plan-record" url="/pages/record/index?planId={{plan.id}}" hover-class="day-pressed" aria-label="{{plan.date}} {{plan.startTime}}的{{plan.activity}}，{{plan.result.makeup ? '已补做，' + plan.result.makeup.date + '，实际' + plan.result.makeup.actualActivity + '，查看结果' : plan.result.status === 'replacement' ? '替代完成，实际' + plan.result.actualActivity + '，查看结果' : plan.result.status === 'completed' ? '已完成，查看结果' : plan.result.status === 'incomplete' ? '未完成，' + plan.result.reason + '，查看结果' : plan.pendingRecord ? '待补记录，点击记录结果' : '记录结果'}}">
+        <text wx:if="{{plan.result.makeup}}">已补做 · {{plan.result.makeup.date}} · 实际{{plan.result.makeup.actualActivity}} · 查看结果</text>
+        <text wx:elif="{{plan.result.status === 'replacement'}}">替代完成 · 实际{{plan.result.actualActivity}} · 查看结果</text>
+        <text wx:elif="{{plan.result.status === 'completed'}}">已完成 · 查看结果</text>
+        <text wx:elif="{{plan.result.status === 'incomplete'}}">未完成 · {{plan.result.reason}} · 查看结果</text>
+        <text wx:elif="{{plan.pendingRecord}}">待补记录</text>
+        <text wx:else>记录结果</text>
+      </navigator>
+      <button wx:if="{{plan.editable}}" class="plan-edit" data-id="{{plan.id}}" bindtap="startEditing" hover-class="day-pressed" aria-label="修改{{plan.date}} {{plan.startTime}}的{{plan.activity}}安排">修改安排</button>
+      <button wx:if="{{plan.editable}}" class="plan-edit" data-id="{{plan.id}}" bindtap="cancelPlan" hover-class="day-pressed" aria-label="取消{{plan.date}} {{plan.startTime}}的{{plan.activity}}安排">取消安排</button>
     </view>
     </view>
   </view>
@@ -47,5 +57,5 @@
     <button wx:if="{{!isNextWeek}}" class="week-next primary-button" bindtap="showNextWeek" hover-class="button-pressed" aria-label="安排下周，切换到下周计划示例">安排下周</button>
     <button wx:if="{{!isCurrentWeek}}" class="week-current" bindtap="showCurrentWeek" hover-class="day-pressed">查看本周计划</button>
   </view>
-  <view class="demo-note">“固定示例”仅供展示。你添加的安排可切换周查看，离开本页后不保留。</view>
+  <view class="demo-note">“固定示例”仅供展示。已到开始时间且没有结果的安排显示“待补记录”，可点击补录。安排和结果仅在本次运行内临时保留，关闭重开不保留。</view>
 </view>

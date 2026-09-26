@@ -35,6 +35,8 @@
 .added-label { color: #50584d; font-size: 12px; line-height: 1.6; }
 .added-content { display: flex; gap: 16px; margin-top: 4px; font-size: 16px; line-height: 1.6; font-weight: 600; }
 .added-time { font-variant-numeric: tabular-nums; }
+.plan-record { display: flex; align-items: center; min-height: 44px; margin-top: 4px; color: #344c36; font-size: 14px; line-height: 1.6; }
+.week-page .plan-edit { min-height: 44px; margin: 4px 0 0; padding: 0; background: transparent; color: #50584d; font-size: 14px; line-height: 44px; text-align: left; }
 .week-page .plan-add, .week-page .plan-confirm { width: 100%; min-height: 48px; margin-top: 20px; border-radius: 24px; font-size: 16px; line-height: 1.5; }
 .week-page .plan-confirm[disabled] { background: #e5e7e2; color: #62665e; }
 .plan-form { margin-top: 24px; }
