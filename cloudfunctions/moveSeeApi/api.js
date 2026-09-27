@@ -7,7 +7,7 @@ function publicRecord(document) {
   const { _id, _owner, _kind, ...record } = document;
   return record;
 }
-function createApi({ db, getIdentity, getOwner, now, logError = value => console.error(JSON.stringify(value)) }) {
+function createApi({ db, getIdentity, now, logError = value => console.error(JSON.stringify(value)) }) {
   return async event => {
     try {
       const identity = getIdentity() || {};
@@ -15,9 +15,7 @@ function createApi({ db, getIdentity, getOwner, now, logError = value => console
       ensure(identity.APPID === APPID, 'APP_MISMATCH', '小程序身份不匹配');
       ensure(event && typeof event === 'object' && !Array.isArray(event));
       if (event.action === 'whoami') return { ok: true, data: { openid: identity.OPENID, appid: identity.APPID } };
-      const owner = getOwner();
-      ensure(typeof owner === 'string' && owner.length > 0, 'OWNER_NOT_CONFIGURED', '尚未配置本人账号');
-      ensure(identity.OPENID === owner, 'FORBIDDEN', '仅本人账号可以使用');
+      const owner = identity.OPENID;
       if (event.action === 'list') {
         ensure(['plans', 'day_marks'].includes(event.collection));
         ensure(event.cursor === undefined || event.cursor === '' || /^d_[a-f0-9]{64}$/.test(event.cursor));

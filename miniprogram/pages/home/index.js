@@ -1,4 +1,5 @@
 Page({
+  onShareAppMessage: require('../../utils/share'),
   data: { artFailed: false },
   onShow() { this.openingToday = false; },
   onArtError() { this.setData({ artFailed: true }); },

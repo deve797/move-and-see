@@ -19,7 +19,6 @@ exports.main = (event, context) => {
   return createApi({
     db,
     getIdentity: () => identity,
-    getOwner: () => process.env.OWNER_OPENID,
     now: () => new Date()
   })(event);
 };

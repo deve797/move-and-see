@@ -1,6 +1,7 @@
 const moods = require('../../utils/mood-options');
 
 Page({
+  onShareAppMessage: require('../../utils/share'),
   data: {
     plan: null, loading: true, loadError: '', saving: false, saveError: '', saveConflict: false,
     isMakeup: false,

@@ -2,6 +2,7 @@ const weeklyProgress = require('../../utils/weekly-progress');
 const fourWeekProgress = require('../../utils/four-week-progress');
 const moods = require('../../utils/mood-options');
 Page({
+  onShareAppMessage: require('../../utils/share'),
   data: {
     cloudLoading: true, cloudError: '',
     weeklyProgress: { completed: 0, total: 0 }, resultGroups: [], hasResults: false, reasonGroups: [],

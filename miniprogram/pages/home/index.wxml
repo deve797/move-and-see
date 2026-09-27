@@ -1,11 +1,14 @@
 <view class="home">
-  <view class="brand serif">Move&See</view>
+  <view class="home-header">
+    <view class="brand serif">Move&See</view>
+    <button class="share-button" open-type="share" hover-class="share-pressed">分享给朋友</button>
+  </view>
   <view class="intro">
     <view class="headline serif" role="heading" aria-level="1">今天想怎么动？</view>
     <view class="description">跑两步也好，伸个懒腰也好。<text class="description-line">照自己的节奏来。</text></view>
   </view>
   <view class="scene" aria-hidden="true">
-    <image wx:if="{{!artFailed}}" class="scene-image" src="/assets/morning-stretch.png" mode="aspectFit" binderror="onArtError" />
+    <image wx:if="{{!artFailed}}" class="scene-image" src="/assets/morning-stretch.jpg" mode="aspectFit" binderror="onArtError" />
     <view wx:else class="art-fallback serif">照自己的节奏来。</view>
   </view>
   <button class="today-button primary-button" hover-class="button-pressed" hover-stay-time="100" bindtap="openToday" aria-label="看看今天，查看今日运动安排">

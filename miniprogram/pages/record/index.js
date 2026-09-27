@@ -38,6 +38,7 @@ function validMakeupDate(value, planDate) {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value && value >= planDate && value <= todayDate();
 }
 Page({
+  onShareAppMessage: require('../../utils/share'),
   data: {
     plan: null, completed: false, canComplete: false, artFailed: false, periodExempt: false,
     loading: true, loadError: '', saving: false, saveError: '', saveConflict: false,

@@ -72,6 +72,10 @@
   <navigator class="review-entry" url="/pages/review/index" hover-class="calendar-pressed" aria-label="查看本周回看"><text>本周回看</text><view class="review-chevron" aria-hidden="true"></view></navigator>
   <view class="demo-note">安排、结果、运动前感受、生理期标记和自愿散步保存成功后，可在重新打开时查看。</view>
   </block>
+  <view class="share-entry">
+    <button class="share-button" open-type="share" hover-class="share-pressed">分享给朋友</button>
+    <view class="share-note">各自记录，彼此的记录互不可见。</view>
+  </view>
 </view>
 <page-container show="{{moodSheetOpen}}" position="bottom" round="{{true}}" duration="180" bindclickoverlay="closeBeforeMood" bindafterleave="afterMoodLeave">
   <scroll-view class="mood-sheet-scroll" scroll-y="{{true}}">

@@ -61,9 +61,9 @@ function database() {
 }
 function fixture() {
   const db = database();
-  const state = { identity: { OPENID: 'owner-one', APPID }, owner: 'owner-one', now: new Date('2026-09-26T04:00:00Z') };
+  const state = { identity: { OPENID: 'owner-one', APPID }, now: new Date('2026-09-26T04:00:00Z') };
   const logs = [];
-  const api = createApi({ db, getIdentity: () => state.identity, getOwner: () => state.owner, now: () => state.now, logError: value => logs.push(value) });
+  const api = createApi({ db, getIdentity: () => state.identity, now: () => state.now, logError: value => logs.push(value) });
   let sequence = 0;
   return {
     db, state, api, logs,
@@ -123,30 +123,110 @@ test('entrypoint handles both context formats and isolates simultaneous caller i
   const f = entrypointFixture();
   const ownerContext = { parsed: { environ: { WX_OPENID: 'owner-one', WX_APPID: APPID } } };
   const otherContext = { parsed: { environment: { WX_OPENID: 'other-user', WX_APPID: APPID } } };
+  const event = { action: 'savePlan', plan: plan(), expectedVersion: 0, requestId: 'same-request' };
   const results = await Promise.all([
-    f.main({ action: 'list', collection: 'plans' }, ownerContext),
-    f.main({ action: 'list', collection: 'plans' }, otherContext),
+    f.main(event, ownerContext),
+    f.main({ ...event, plan: plan({ activity: '散步' }) }, otherContext),
     f.main({ action: 'whoami' }, otherContext)
   ]);
-  assert.deepEqual(ok(results[0]), { items: [], nextCursor: '' });
-  error(results[1], 'FORBIDDEN');
+  assert.equal(ok(results[0]).activity, '跑步');
+  assert.equal(ok(results[1]).activity, '散步');
   assert.deepEqual(ok(results[2]), { openid: 'other-user', appid: APPID });
+  const lists = await Promise.all([
+    f.main({ action: 'list', collection: 'plans' }, ownerContext),
+    f.main({ action: 'list', collection: 'plans' }, otherContext)
+  ]);
+  assert.deepEqual(ok(lists[0]).items, [results[0].data]);
+  assert.deepEqual(ok(lists[1]).items, [results[1].data]);
 });
 
 test('identity is injected by WeChat; whoami never trusts forged event fields', async () => {
   const f = fixture();
   const event = { action: 'whoami', OPENID: 'forged', APPID: 'forged', context: { OPENID: 'forged' }, headers: { secret: 'private' } };
   assert.deepEqual(ok(await f.api(event)), { openid: 'owner-one', appid: APPID });
-  f.state.identity = {};
-  error(await f.api(event), 'AUTH_REQUIRED');
-  f.state.identity = { OPENID: 'owner-one', APPID: 'other-app' };
-  error(await f.api(event), 'APP_MISMATCH');
-  f.state.identity = { OPENID: 'other-user', APPID };
-  error(await f.save(plan(), { OPENID: 'owner-one' }), 'FORBIDDEN');
-  f.state.identity.OPENID = 'owner-one';
-  f.state.owner = undefined;
-  error(await f.list(), 'OWNER_NOT_CONFIGURED');
+  for (const identity of [{}, { OPENID: '', APPID }, { OPENID: 123, APPID }]) {
+    f.state.identity = identity;
+    error(await f.api(event), 'AUTH_REQUIRED');
+    error(await f.save(plan(), { OPENID: 'owner-one', APPID }), 'AUTH_REQUIRED');
+  }
+  for (const identity of [{ OPENID: 'owner-one' }, { OPENID: 'owner-one', APPID: 'other-app' }]) {
+    f.state.identity = identity;
+    error(await f.api(event), 'APP_MISMATCH');
+    error(await f.save(plan(), { OPENID: 'owner-one', APPID }), 'APP_MISMATCH');
+  }
   assert.equal(f.db.stats.transactions, 0);
+});
+
+test('users independently save and replay identical plan IDs, dates and request IDs', async () => {
+  const f = fixture();
+  const event = { action: 'savePlan', plan: plan(), expectedVersion: 0, requestId: 'same-request' };
+  const first = ok(await f.api(event));
+  const firstDay = ok(await f.day({ date: first.date, periodMarked: true }, { requestId: 'same-day-request' }));
+  f.state.identity = { OPENID: 'other-user', APPID };
+  assert.deepEqual(ok(await f.list()).items, []);
+  assert.deepEqual(ok(await f.list('day_marks')).items, []);
+  const otherEvent = { ...event, plan: plan({ activity: '散步' }), OPENID: 'owner-one', _owner: 'owner-one' };
+  const other = ok(await f.api(otherEvent));
+  const otherDay = ok(await f.day({ date: first.date, periodMarked: false }, { requestId: 'same-day-request' }));
+  assert.deepEqual(ok(await f.api(otherEvent)), other);
+  const edited = ok(await f.save({ ...other, startTime: '19:00' }, { expectedDayVersion: otherDay.version }));
+  assert.deepEqual(ok(await f.api(otherEvent)), edited);
+  assert.deepEqual(ok(await f.list()).items, [edited]);
+  assert.deepEqual(ok(await f.list('day_marks')).items, [otherDay]);
+  const owners = f.db.records('plans').map(record => record._owner).sort();
+  assert.deepEqual(owners, ['other-user', 'owner-one']);
+  assert.equal(f.db.records('day_marks').length, 2);
+  f.state.identity = { OPENID: 'owner-one', APPID };
+  assert.deepEqual(ok(await f.api(event)), first);
+  assert.deepEqual(ok(await f.list()).items, [first]);
+  assert.deepEqual(ok(await f.list('day_marks')).items, [firstDay]);
+  error(await f.save({ ...first, startTime: '20:00' }), 'DAY_VERSION_CONFLICT');
+  ok(await f.save({ ...first, startTime: '20:00' }, { expectedDayVersion: firstDay.version }));
+});
+
+test('forged ownership, foreign versions and physical IDs cannot read or mutate another user', async () => {
+  const f = fixture();
+  const first = ok(await f.save(plan()));
+  const firstDay = ok(await f.day({ date: first.date, periodMarked: true }));
+  f.state.identity = { OPENID: 'other-user', APPID };
+  assert.deepEqual(ok(await f.api({ action: 'list', collection: 'plans', _owner: 'owner-one', OPENID: 'owner-one' })).items, []);
+  assert.deepEqual(ok(await f.list('plans', documentId('owner-one', first.id))).items, []);
+  error(await f.save({ ...first, cancelled: true }, { OPENID: 'owner-one' }), 'VERSION_CONFLICT');
+  error(await f.day({ ...firstDay, periodMarked: false }), 'VERSION_CONFLICT');
+  error(await f.save(plan({ _owner: 'owner-one' })), 'INVALID_ARGUMENT');
+  error(await f.day({ date: first.date, periodMarked: true, _owner: 'owner-one' }), 'INVALID_ARGUMENT');
+  error(await f.save(plan({ _id: documentId('owner-one', first.id) })), 'INVALID_ARGUMENT');
+  const guessed = ok(await f.save(plan({ id: documentId('owner-one', first.id) })));
+  assert.deepEqual(ok(await f.list()).items, [guessed]);
+  f.state.identity = { OPENID: 'owner-one', APPID };
+  assert.deepEqual(ok(await f.list()).items, [first]);
+  assert.deepEqual(ok(await f.list('day_marks')).items, [firstDay]);
+});
+
+test('existing owner records keep their document IDs and remain editable without migration', async () => {
+  const f = fixture();
+  const existing = { ...plan(), version: 4, createdAt: '2026-09-20T04:00:00.000Z', updatedAt: '2026-09-25T04:00:00.000Z', _owner: 'owner-one', _kind: 'record' };
+  const id = documentId('owner-one', existing.id);
+  f.db.seed('plans', id, existing);
+  const listed = ok(await f.list()).items[0];
+  const edited = ok(await f.save({ ...listed, startTime: '19:00' }));
+  assert.equal(edited.version, 5);
+  assert.equal(edited.createdAt, existing.createdAt);
+  assert.equal(f.db.records('plans').length, 1);
+  assert.equal((await f.db.collection('plans').doc(id).get()).data.startTime, '19:00');
+});
+
+test('transaction ownership checks reject a foreign record or day in a caller document slot', async () => {
+  for (const collection of ['plans', 'day_marks']) {
+    const f = fixture();
+    const value = collection === 'plans' ? { ...plan(), version: 1 } : { date: '2026-09-26', periodMarked: true, version: 1 };
+    const id = documentId('owner-one', collection === 'plans' ? value.id : value.date);
+    f.db.seed(collection, id, { ...value, _owner: 'other-user', _kind: 'record' });
+    const before = f.db.records(collection);
+    error(await f.save(plan(), { expectedVersion: collection === 'plans' ? 1 : 0, expectedDayVersion: 1 }), 'FORBIDDEN');
+    assert.deepEqual(f.db.records(collection), before);
+    assert.deepEqual(ok(await f.list(collection)).items, []);
+  }
 });
 
 test('invalid dates, enums, notes, nested fields and forged ownership never write', async () => {

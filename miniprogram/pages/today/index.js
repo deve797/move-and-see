@@ -4,6 +4,7 @@ function todayDate() {
   return new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 Page({
+  onShareAppMessage: require('../../utils/share'),
   data: {
     activities: [], date: '', artFailed: {}, periodMarked: false, periodWalk: null,
     loading: true, loadError: '', saving: false, saveError: '', saveConflict: false,

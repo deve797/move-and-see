@@ -14,7 +14,7 @@
     <view>这天未运动无需填写原因，可以直接返回。原安排和已有记录保留；实际做了运动也可以记下。</view>
   </view>
   <view wx:if="{{plan && !replacement && !recordingReplacement && !recordingIncomplete && !incomplete && !correcting}}" class="record-scene" aria-hidden="true">
-    <image wx:if="{{!artFailed}}" class="walking-art" src="/assets/record-walking.png" mode="aspectFit" binderror="onArtError" />
+    <image wx:if="{{!artFailed}}" class="walking-art" src="/assets/record-walking.jpg" mode="aspectFit" binderror="onArtError" />
   </view>
   <view wx:if="{{plan}}" class="record-summary" aria-label="原计划{{plan.activity}}，{{plan.date}}，开始时间{{plan.startTime}}，{{makeup ? '已补做' + (selectedReason ? '，原未完成原因，' + selectedReason : '') : replacement ? '替代完成，实际' + plan.result.actualActivity : completed ? '已完成' : incomplete ? '未完成' + (selectedReason ? '，' + selectedReason : '') : '尚未记录'}}">
     <view wx:if="{{replacement || recordingReplacement || makeup || recordingMakeup}}" class="activity-time">原计划</view>

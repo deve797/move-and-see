@@ -6,6 +6,7 @@ function canEdit(plan, now) {
   return Boolean(plan && !plan.cancelled && !plan.result && isFuture(plan, now));
 }
 Page({
+  onShareAppMessage: require('../../utils/share'),
   data: {
     days: [], selectedDate: '', title: '本周计划', range: '', isCurrentWeek: true, isNextWeek: false, artFailed: false,
     loading: true, loadError: '', saving: false, saveError: '', saveConflict: false,

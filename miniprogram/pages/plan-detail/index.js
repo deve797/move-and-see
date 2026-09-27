@@ -1,6 +1,7 @@
 const todaySamples = require('../../utils/today-preview');
 const { samples } = require('../../utils/week-preview');
 Page({
+  onShareAppMessage: require('../../utils/share'),
   data: { activity: null, date: '', returnLabel: '返回周计划', returnUrl: '/pages/week/index' },
   onLoad(query) {
     const isToday = query.source === 'today';
