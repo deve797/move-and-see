@@ -107,9 +107,11 @@ second.startCorrection();
 chooseReason(second, '临时有事');
 second.onHide && second.onHide();
 (await second.onShow());
-assert.equal(second.data.correcting, false);
+assert.equal(second.data.correcting, true);
+assert.equal(second.data.correctionReason, '临时有事');
 assert.equal(second.data.plan.result.reason, '下雨');
-assert.equal(snapshot(), beforeDiscard); // 离开后返回不提交草稿。
+assert.equal(snapshot(), beforeDiscard); // 返回只保留草稿，不自动提交。
+second.cancelCorrection();
 second.startCorrection();
 chooseStatus(second, 'completed');
 chooseStatus(second, 'incomplete');
@@ -187,6 +189,9 @@ assert.deepEqual(app.globalData.plans[0].result, reasonFreeResult, '取消免考
 assert.equal(exempt.data.correcting, true);
 assert.match(exempt.data.saveError, /更新|刷新/);
 (await exempt.onShow());
+assert.equal(exempt.data.saveConflict, true);
+assert.equal(exempt.data.correctionStatus, 'completed');
+exempt.cancelCorrection(); // 明确放弃后才刷新日期标记和版本。
 assert.equal(exempt.data.periodExempt, false);
 exempt.startCorrection();
 assert.equal(exempt.data.canConfirmCorrection, false, '普通未完成记录重新修正仍要求原因');

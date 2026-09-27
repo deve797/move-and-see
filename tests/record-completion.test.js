@@ -70,7 +70,8 @@ app.globalData.plans[1].cancelled = true;
 assert.equal(app.globalData.plans[1].result, undefined);
 assert.match(cancelled.data.saveError, /更新|刷新/);
 (await cancelled.onShow());
-assert.equal(cancelled.data.plan, null);
+assert.equal(cancelled.data.saveConflict, true); // 返回保留冲突，重新进入页面才读取最新状态。
+assert.equal((await mount('record', app, { planId: '2' })).data.plan, null);
 assert.equal((await mount('record', app, { planId: '2' })).data.canComplete, false);
 const alreadyRecorded = (await mount('record', app, { planId: '3' }));
 const existing = { status: 'completed' };
@@ -80,7 +81,8 @@ app.globalData.plans[2].result = existing;
 assert.equal(app.globalData.plans[2].result, existing);
 assert.match(alreadyRecorded.data.saveError, /更新|刷新/);
 (await alreadyRecorded.onShow());
-assert.equal(alreadyRecorded.data.completed, true);
+assert.equal(alreadyRecorded.data.saveConflict, true);
+assert.equal((await mount('record', app, { planId: '3' })).data.completed, true);
 assert.equal((await mount('record', runtime(), { planId: '1' })).data.plan, null);
 
 // 从已有新增流程建立安排，检查两个列表返回刷新以及完成后的编辑保护。

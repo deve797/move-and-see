@@ -113,7 +113,8 @@ assert.deepEqual(plain(currentResult().runningData), { ...dataBeforeMood, heartR
 const saved = snapshot();
 input(editing, 'durationMinutes', '999');
 (await editing.onShow());
-assert.equal(editing.data.runningData.durationMinutes, '30.5');
+assert.equal(editing.data.runningData.durationMinutes, '999');
+assert.equal((await mount(app, 1)).data.runningData.durationMinutes, '30.5');
 assert.equal(snapshot(), saved);
 
 // 已有体感选择不重置正在编辑的跑步草稿，跑步确认也不覆盖体感。
@@ -151,7 +152,9 @@ app.globalData.plans[0].result = replacement;
 assert.equal(replacement.runningData, undefined);
 assert.match(stale.data.saveError, /更新|刷新/);
 (await stale.onShow());
-assert.deepEqual(plain(stale.data.runningData), empty);
+assert.equal(stale.data.runningData.durationMinutes, '20');
+assert.equal(stale.data.saveConflict, true);
+assert.deepEqual(plain((await mount(app, 1)).data.runningData), empty);
 const cancelled = (await mount(app, 2));
 input(cancelled, 'durationMinutes', '20');
 const secondResult = JSON.stringify(app.globalData.plans[1].result);

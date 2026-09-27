@@ -114,7 +114,7 @@ for (const id of [3, 4, 5, 999, 'invalid', undefined]) {
   (await choose(invalid, ''));
   assert.equal(snapshot(), current);
 }
-const stale = (await mount('record', app, 2));
+let stale = (await mount('record', app, 2));
 app.globalData.plans[1].version += 1;
 app.globalData.plans[1].result = { status: 'completed', feeling: '吃力' };
 const replacement = snapshot();
@@ -122,6 +122,8 @@ const replacement = snapshot();
 assert.equal(snapshot(), replacement);
 assert.match(stale.data.saveError, /更新|刷新/);
 (await stale.onShow());
+assert.equal(stale.data.saveConflict, true);
+stale = (await mount('record', app, 2)); // 退出重进读取最新结果。
 assert.equal(stale.data.selectedFeeling, '吃力');
 app.globalData.plans[1].version += 1;
 app.globalData.plans[1].cancelled = true;
@@ -129,6 +131,8 @@ const cancelled = snapshot();
 (await choose(stale, ''));
 assert.equal(snapshot(), cancelled);
 (await stale.onShow());
+assert.equal(stale.data.saveConflict, true);
+stale = (await mount('record', app, 2));
 assert.equal(stale.data.plan, null);
 assert.equal(stale.data.selectedFeeling, '');
 console.log('PASS: optional feeling, exclusive choices/reopen/edit/clear, plan/result/mood isolation, same-name plans, correction lifecycle and invalid/cancelled/stale result guards');

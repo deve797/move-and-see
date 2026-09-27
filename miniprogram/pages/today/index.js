@@ -20,8 +20,11 @@ Page({
     try {
       await getApp().loadData();
       this.renderToday();
-      this._moodPlan = null;
-      this.setData({ moodSheetOpen: false, moodPlanId: null, selectedBeforeMood: '', beforeMoodNote: '', beforeMoodNoteFocused: false, saveError: '', saveConflict: false });
+      // 重新显示也可能只是从后台回来；保留弹层草稿及其原版本，日期和列表仍刷新。
+      if (!this.data.moodSheetOpen) {
+        this._moodPlan = null;
+        this.setData({ moodPlanId: null, selectedBeforeMood: '', beforeMoodNote: '', beforeMoodNoteFocused: false });
+      }
     } catch (error) {
       this.setData({ loadError: error.message || '暂时无法读取记录，请重试。' });
     } finally {

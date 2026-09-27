@@ -19,7 +19,10 @@ Page({
     this.setData({ loading: true, loadError: '' });
     try {
       await getApp().loadData();
-      this.renderMood();
+      const result = this._plan && (this.data.isMakeup ? this._plan.result.makeup : this._plan.result);
+      const keepDraft = result && (this.data.saveError || this.data.selectedMood !== (result.afterMood || '') || this.data.note !== (result.afterMoodNote || ''));
+      // 未确认内容保留原计划版本，不能在刷新时静默覆盖另一端已保存的感受。
+      if (!keepDraft) this.renderMood();
     } catch (error) {
       this.setData({ loadError: error.message || '暂时无法读取感受，请重试。' });
     } finally {

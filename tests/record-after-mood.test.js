@@ -149,7 +149,9 @@ app.globalData.plans[1].cancelled = true;
 (await cancelled.confirmMood());
 assert.match(cancelled.data.saveError, /更新|刷新/);
 (await cancelled.onShow());
-assert.equal(cancelled.data.plan, null);
+assert.equal(cancelled.data.saveConflict, true);
+assert.equal(cancelled.data.selectedMood, 'low');
+assert.equal((await mount('mood', app, 2)).data.plan, null);
 delete app.globalData.plans[1].cancelled;
 assert.equal(app.globalData.plans[1].result.afterMood, 'great');
 
@@ -169,7 +171,9 @@ const incompleteSaved = snapshot();
 (await stale.confirmMood());
 assert.match(stale.data.saveError, /更新|刷新/);
 (await stale.onShow());
-assert.equal(stale.data.plan, null);
+assert.equal(stale.data.saveConflict, true);
+assert.equal(stale.data.note, '旧结果页面的草稿');
+assert.equal((await mount('mood', app, 1)).data.plan, null);
 assert.equal(snapshot(), incompleteSaved);
 assert.equal(app.globalData.plans[0].result.afterMood, undefined);
 record.startCorrection();
@@ -189,8 +193,12 @@ assert.equal(snapshot(), replacementSaved); // 即使新结果也是完成，也
 assert.match(current.data.saveError, /更新|刷新/);
 assert.equal(current.data.note, '不能覆盖新结果'); // 冲突保留用户填写。
 (await current.onShow());
-assert.equal(current.data.selectedMood, 'great');
-assert.equal(current.data.note, '新的结果');
+assert.equal(current.data.saveConflict, true);
+assert.equal(current.data.selectedMood, 'down');
+assert.equal(current.data.note, '不能覆盖新结果');
+const refreshed = (await mount('mood', app, 1));
+assert.equal(refreshed.data.selectedMood, 'great');
+assert.equal(refreshed.data.note, '新的结果');
 assert.equal(app.globalData.plans[0].beforeMood, 'down');
 assert.equal(app.globalData.plans[0].beforeMoodNote, '修改运动前备注');
 

@@ -58,7 +58,13 @@ Page({
     this.setData({ loading: true, loadError: '' });
     try {
       await getApp().loadData();
-      this.refreshPlan();
+      const result = this._plan && this._plan.result;
+      const savedRunning = runningValues(this._plan && this._plan.activity === '跑步' && result && result.status === 'completed' ? result.runningData : undefined);
+      const keepDraft = this._plan && (this.data.saveError || this.data.recordingIncomplete || this.data.recordingReplacement || this.data.recordingMakeup || this.data.correcting ||
+        runningFields.some(field => this.data.runningData[field.key] !== savedRunning[field.key]));
+      // 保留输入对应的旧版本；返回时若云端已更新，提交仍需通过版本校验。
+      if (!keepDraft) this.refreshPlan();
+      else this.setData({ makeupEndDate: todayDate() });
     } catch (error) {
       this.setData({ loadError: error.message || '暂时无法读取记录，请重试。' });
     } finally {

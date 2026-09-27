@@ -77,10 +77,14 @@ assert.equal(snapshot(), original);
 record.startReplacement();
 select(record, 5);
 (await record.onShow());
+assert.equal(record.data.recordingReplacement, true);
+assert.equal(record.data.actualActivity, '散步');
+assert.equal(snapshot(), original);
+record.cancelReplacement();
 (await record.confirmReplacement());
 assert.equal(record.data.recordingReplacement, false);
 assert.equal(record.data.actualActivity, '');
-assert.equal(snapshot(), original); // 离页返回不提交草稿。
+assert.equal(snapshot(), original); // 返回保留草稿，明确放弃才清空。
 
 record.inputRunningData({ currentTarget: { dataset: { field: 'durationMinutes' } }, detail: { value: '30' } });
 record.inputRunningData({ currentTarget: { dataset: { field: 'distanceKm' } }, detail: { value: '5' } });

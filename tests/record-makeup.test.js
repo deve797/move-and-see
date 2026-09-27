@@ -99,11 +99,16 @@ record.startMakeup();
 date(record, '2026-09-28');
 activity(record, 5);
 (await record.onShow());
+assert.equal(record.data.recordingMakeup, true);
+assert.equal(record.data.makeupDate, '2026-09-28');
+assert.equal(record.data.makeupActivity, '散步');
+assert.equal(snapshot(), original);
+record.cancelMakeup();
 (await record.confirmMakeup());
 assert.equal(record.data.recordingMakeup, false);
 assert.equal(record.data.makeupDate, '');
 assert.equal(record.data.makeupActivity, '');
-assert.equal(snapshot(), original); // 离页返回放弃草稿。
+assert.equal(snapshot(), original); // 明确放弃才清空草稿。
 staleConfirmation.startMakeup();
 date(staleConfirmation, '2026-09-26');
 activity(staleConfirmation, 0);

@@ -81,10 +81,13 @@ open(reopened, 1);
 assert.equal(reopened.data.selectedBeforeMood, 'good');
 assert.equal(reopened.data.beforeMoodNote, note);
 choose(reopened, 'down');
-input(reopened, '离页放弃');
+input(reopened, '回来继续填写');
 (await reopened.onShow());
 assert.equal(snapshot(), saved);
-assert.equal(reopened.data.moodSheetOpen, false);
+assert.equal(reopened.data.moodSheetOpen, true);
+assert.equal(reopened.data.beforeMoodNote, '回来继续填写');
+reopened.closeBeforeMood();
+reopened.afterMoodLeave();
 open(reopened, 1);
 choose(reopened, 'low');
 reopened.afterMoodLeave(); // 原生返回收起也不提交。

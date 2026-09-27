@@ -50,6 +50,7 @@ Page({
     const preview = weekPreview(value, now);
     this._plans = getApp().globalData.plans;
     preview.days = preview.days.map(day => Object.assign({}, day, {
+      periodWalk: getApp().getDay(day.date).periodWalk || null,
       plans: this._plans.filter(plan => plan.date === day.date && !plan.cancelled).map(plan => Object.assign({}, plan, {
         editable: canEdit(plan, now),
         periodExempt: (getApp().globalData.periodDays || {})[plan.date] === true,
