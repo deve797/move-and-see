@@ -30,6 +30,9 @@ const event = value => ({ detail: { value } });
 const plans = page => page.data.days.flatMap(day => day.plans);
 const page = (await mount());
 assert.equal(page.data.selectedDate, '2026-09-21');
+assert.equal(page.data.days.length, 7);
+assert.equal(plans(page).length, 0);
+assert.ok(page.data.days.every(day => day.name === undefined && day.duration === undefined)); // 新用户没有固定运动示例。
 page.showNextWeek();
 assert.equal(page.data.selectedDate, '2026-09-28');
 page.startAdding();
@@ -47,7 +50,7 @@ const tuesday = page.data.days.find(day => day.date === '2026-09-29');
 assert.equal(tuesday.plans.length, 1);
 assert.equal(tuesday.plans[0].activity, '跑步');
 assert.equal(tuesday.plans[0].startTime, '19:00');
-assert.equal(tuesday.name, '休息一下'); // 固定示例没有被改写。
+assert.equal(tuesday.name, undefined); // 真实安排之外没有固定示例。
 assert.equal(page.data.adding, false);
 (await page.confirmAdding());
 assert.equal(plans(page).length, 1); // 连点确认不重复新增。

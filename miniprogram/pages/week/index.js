@@ -8,7 +8,7 @@ function canEdit(plan, now) {
 Page({
   onShareAppMessage: require('../../utils/share'),
   data: {
-    days: [], selectedDate: '', title: '本周计划', range: '', isCurrentWeek: true, isNextWeek: false, artFailed: false,
+    days: [], selectedDate: '', title: '本周计划', range: '', isCurrentWeek: true, isNextWeek: false,
     loading: true, loadError: '', saving: false, saveError: '', saveConflict: false,
     adding: false, activities: ['瑜伽', '跑步', '力量训练', '徒步', '网球', '散步'],
     draft: { date: '', activity: '', startTime: '' }, canConfirm: false, editingId: null, activityIndex: 0
@@ -163,6 +163,5 @@ Page({
       this.cancelAdding();
       this.renderWeek(plan.date);
     }
-  },
-  onArtError() { this.setData({ artFailed: true }); }
+  }
 });

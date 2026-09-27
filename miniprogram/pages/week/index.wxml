@@ -37,12 +37,10 @@
   <button disabled="{{saving}}" wx:else class="plan-add primary-button" bindtap="startAdding" hover-class="button-pressed">新增运动安排</button>
   <view wx:if="{{!adding}}" class="week-list">
     <view wx:for="{{days}}" wx:key="date" class="day-group">
-    <view class="day-row" aria-label="{{item.weekday}}，{{item.shortDate}}，固定示例，{{item.name}}，{{item.duration}}">
+    <view class="day-row">
       <view class="day-date"><text class="weekday">{{item.weekday}}</text><text class="date-number">{{item.shortDate}}</text></view>
-      <view class="status-slot" aria-hidden="true"><view class="status-mark {{item.tone}}"></view></view>
-      <view class="activity"><text class="activity-name {{item.tone === 'rest' ? 'rest-name' : ''}}">{{item.name}}</text><text wx:if="{{item.duration}}" class="activity-duration">{{item.duration}}</text><text class="sample-label">固定示例</text></view>
-      <view wx:if="{{!artFailed}}" class="day-art" aria-hidden="true"><image class="art-sheet" src="/assets/week-illustrations.png" style="left: {{-item.col * 100}}%; top: {{-item.row * 100}}%;" mode="scaleToFill" binderror="onArtError" /></view>
-    </view>
+      <view class="day-content">
+    <view wx:if="{{!item.plans.length && !item.periodWalk}}" class="day-empty">暂无安排</view>
     <view wx:if="{{item.periodWalk}}" class="added-plan period-walk-history" aria-label="{{item.date}}，自愿散步30分钟，{{item.periodWalk.status === 'completed' ? '已完成' : item.periodWalk.status === 'incomplete' ? '未完成' : '未记录结果'}}，不计入考核">
       <text class="added-label">自愿散步 · 不计入考核</text>
       <view class="added-content">散步 · 30 分钟</view>
@@ -65,11 +63,13 @@
       <button disabled="{{saving}}" wx:if="{{plan.editable}}" class="plan-edit" data-id="{{plan.id}}" bindtap="cancelPlan" hover-class="day-pressed" aria-label="取消{{plan.date}} {{plan.startTime}}的{{plan.activity}}安排">取消安排</button>
     </view>
     </view>
+    </view>
+    </view>
   </view>
   <view wx:if="{{!adding}}" class="week-actions">
-    <button disabled="{{saving}}" wx:if="{{!isNextWeek}}" class="week-next primary-button" bindtap="showNextWeek" hover-class="button-pressed" aria-label="安排下周，切换到下周计划示例">安排下周</button>
+    <button disabled="{{saving}}" wx:if="{{!isNextWeek}}" class="week-next primary-button" bindtap="showNextWeek" hover-class="button-pressed" aria-label="安排下周，切换到下周计划">安排下周</button>
     <button disabled="{{saving}}" wx:if="{{!isCurrentWeek}}" class="week-current" bindtap="showCurrentWeek" hover-class="day-pressed">查看本周计划</button>
   </view>
-  <view class="demo-note">“固定示例”仅供展示。已到开始时间且没有结果的非免考核安排显示“待补记录”，可点击补录。安排、结果和生理期标记保存成功后，可在重新打开时查看。</view>
+  <view class="demo-note">已到开始时间且没有结果的非免考核安排显示“待补记录”，可点击补录。安排、结果和生理期标记保存成功后，可在重新打开时查看。</view>
   </block>
 </view>

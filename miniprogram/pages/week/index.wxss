@@ -9,29 +9,20 @@
 .week-list { margin-top: 10px; }
 .day-group { border-bottom: 1px solid #eff0ed; }
 .day-group:last-child { border-bottom: 0; }
-.day-row { display: flex; align-items: center; min-height: 78px; text-align: left; }
+.day-row { display: flex; align-items: flex-start; min-height: 78px; padding: 14px 0; text-align: left; }
 .day-pressed { background: #f4f6f2; }
 .day-date { display: flex; flex-direction: column; justify-content: center; flex-shrink: 0; width: 57px; min-height: 43px; border-right: 1px solid #eff0ed; }
 .weekday { font-size: 14px; line-height: 1.6; font-weight: 600; }
 .date-number { font-size: 12px; line-height: 1.6; color: #71746f; font-variant-numeric: tabular-nums; }
-.status-slot { display: flex; width: 48px; flex-shrink: 0; justify-content: center; }
-.status-mark { width: 12px; height: 12px; border-radius: 50%; }
-.sage { background: #9bad98; }
-.orange { background: #fc714c; }
-.rest { width: 12px; height: 2px; border-radius: 0; background: #898e86; }
-.activity { display: flex; flex: 1; min-width: 0; flex-direction: column; padding: 9px 4px 9px 0; }
-.activity-name { font-size: 16px; line-height: 1.6; font-weight: 600; }
-.rest-name { color: #71746f; font-weight: 400; font-size: 14px; }
-.activity-duration { font-size: 13px; line-height: 1.6; color: #71746f; }
-.day-art { position: relative; flex-shrink: 0; width: 58px; height: 58px; overflow: hidden; }
-.art-sheet { position: absolute; width: 400%; height: 200%; }
+.day-content { flex: 1; min-width: 0; margin-left: 16px; }
+.day-empty { display: flex; align-items: center; min-height: 43px; color: #71746f; font-size: 14px; line-height: 1.6; }
 .week-actions { margin-top: 24px; }
 .week-page .week-next { width: 100%; min-height: 48px; border-radius: 24px; font-size: 16px; line-height: 1.5; }
 .week-page .week-current { width: 100%; min-height: 44px; margin-top: 8px; border-radius: 22px; background: transparent; color: #50584d; font-size: 15px; line-height: 44px; }
 .week-page .week-current.day-pressed { background: #f4f6f2; }
 .demo-note { margin-top: 20px; color: #71746f; font-size: 12px; line-height: 1.7; }
-.sample-label { color: #71746f; font-size: 11px; line-height: 1.6; }
-.added-plan { padding: 12px 16px; margin: 0 0 12px 57px; background: #f4f6f2; border-radius: 12px; }
+.added-plan { padding: 12px 16px; margin-bottom: 12px; background: #f4f6f2; border-radius: 12px; }
+.added-plan:last-child { margin-bottom: 0; }
 .added-label { color: #50584d; font-size: 12px; line-height: 1.6; }
 .period-badge { margin-top: 8px; color: #344c36; font-size: 14px; font-weight: 600; line-height: 1.6; }
 .added-content { display: flex; gap: 16px; margin-top: 4px; font-size: 16px; line-height: 1.6; font-weight: 600; }
@@ -52,9 +43,4 @@
   .week-description { font-size: 14px; }
   .day-row { min-height: 70px; }
   .day-date { width: 47px; }
-  .status-slot { width: 34px; }
-  .day-art { width: 50px; height: 50px; }
-  .activity-name { font-size: 15px; }
-  .rest-name { font-size: 14px; }
-  .added-plan { margin-left: 47px; }
 }
