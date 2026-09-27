@@ -27,6 +27,7 @@ async function mount(runtime = app) {
   return page;
 }
 const event = value => ({ detail: { value } });
+const dayEvent = date => ({ currentTarget: { dataset: { date } } });
 const plans = page => page.data.days.flatMap(day => day.plans);
 const page = (await mount());
 assert.equal(page.data.selectedDate, '2026-09-21');
@@ -35,15 +36,17 @@ assert.equal(plans(page).length, 0);
 assert.ok(page.data.days.every(day => day.name === undefined && day.duration === undefined)); // 新用户没有固定运动示例。
 page.showNextWeek();
 assert.equal(page.data.selectedDate, '2026-09-28');
-page.startAdding();
-page.selectPlanDate(event('2026-09-29'));
+page.startAdding(dayEvent('2026-09-29'));
+assert.equal(page.data.draft.date, '2026-09-29');
+page.selectPlanDate(event('2026-09-30'));
+assert.equal(page.data.draft.date, '2026-09-29'); // 新增日期由点击的当天确定。
 (await page.confirmAdding());
 assert.equal(plans(page).length, 0);
 page.selectActivity(event('1'));
 assert.equal(page.data.canConfirm, false); // 没有时间。
 (await page.confirmAdding());
 assert.equal(plans(page).length, 0);
-page.selectStartTime(event('19:00'));
+page.selectStartTime(event([19, 0]));
 assert.equal(page.data.canConfirm, true);
 (await page.confirmAdding());
 const tuesday = page.data.days.find(day => day.date === '2026-09-29');
@@ -63,10 +66,11 @@ page.showNextWeek();
 assert.equal(plans(page).length, 1);
 assert.equal(plans(page)[0].date, '2026-09-29');
 
-page.startAdding();
+page.startAdding(dayEvent('2026-10-04'));
+assert.equal(page.data.draft.date, '2026-10-04'); // 周日入口不回退到周一。
 assert.equal(page.data.draft.activity, '');
 assert.equal(page.data.draft.startTime, '');
-page.selectStartTime(event('20:00'));
+page.selectStartTime(event([20, 0]));
 assert.equal(page.data.canConfirm, false); // 没有项目。
 (await page.confirmAdding());
 assert.equal(plans(page).length, 1);
@@ -75,20 +79,23 @@ page.cancelAdding();
 (await page.confirmAdding());
 assert.equal(plans(page).length, 1); // 取消完整表单不新增。
 
-page.startAdding();
-page.selectPlanDate(event('2027-01-01'));
+page.selectWeek(event('2027-01-01'));
+page.startAdding(dayEvent('2027-01-01'));
+assert.equal(page.data.draft.date, '2027-01-01');
 page.selectActivity(event('5'));
-page.selectStartTime(event('08:30'));
+page.selectStartTime(event([8, 3]));
 (await page.confirmAdding());
 assert.equal(page.data.selectedDate, '2026-12-28');
 assert.equal(plans(page).length, 1);
 assert.equal(plans(page)[0].date, '2027-01-01');
 page.showNextWeek();
 assert.equal(plans(page).length, 1); // 跨年新增不覆盖原来那周。
-page.startAdding();
-page.selectPlanDate(event('2026-09-29'));
+page.startAdding(dayEvent('2026-09-29'));
+assert.equal(page.data.draft.date, '2026-09-29');
+page.selectPlanDate(event('2026-09-30'));
+assert.equal(page.data.draft.date, '2026-09-29'); // 新增日期由点击的当天确定。
 page.selectActivity(event('0'));
-page.selectStartTime(event('20:00'));
+page.selectStartTime(event([20, 0]));
 (await page.confirmAdding());
 assert.equal(plans(page).length, 2); // 同一天可安排两项。
 assert.equal(new Set(plans(page).map(plan => plan.id)).size, 2);
@@ -96,6 +103,26 @@ const reopened = (await mount());
 reopened.showNextWeek();
 assert.equal(plans(reopened).length, 2); // 切片 4：同次运行内跨页共享。
 assert.equal((await mount({ globalData: { plans: [] } }))._plans.length, 0); // 独立测试 fixture 不共享状态。
+// 每个可选分钟和一天首尾都通过真实 picker 事件保存。
+const timePage = await mount(createTestApp());
+timePage.showNextWeek();
+assert.deepEqual(Array.from(timePage.data.startTimeOptions[0]), Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0') + '时'));
+assert.deepEqual(Array.from(timePage.data.startTimeOptions[1]), ['00分', '10分', '20分', '30分', '40分', '50分']);
+for (const hour of [0, 23]) {
+  for (let minuteIndex = 0; minuteIndex < 6; minuteIndex += 1) {
+    timePage.startAdding(dayEvent('2026-10-04'));
+    timePage.selectActivity(event('0'));
+    timePage.selectStartTime(event([hour, minuteIndex]));
+    const time = String(hour).padStart(2, '0') + ':' + String(minuteIndex * 10).padStart(2, '0');
+    assert.equal(timePage.data.draft.startTime, time);
+    assert.deepEqual(Array.from(timePage.data.startTimeIndex), [hour, minuteIndex]);
+    await timePage.confirmAdding();
+    assert.equal(timePage._plans.at(-1).date, '2026-10-04');
+    assert.equal(timePage._plans.at(-1).startTime, time);
+  }
+}
+assert.equal(timePage._plans.length, 12);
+console.log('PASS: day-specific Tuesday/Sunday/year-boundary entry, readonly new date, ten-minute picker at day boundaries');
 console.log('PASS: required fields, cancel, next Tuesday 19:00 run, week isolation, year boundary, multiple plans, duplicate confirm, isolated async fixtures and shared plans');
 
 })().catch(error => { console.error(error); process.exitCode = 1; });

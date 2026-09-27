@@ -27,10 +27,10 @@ const event = value => ({ detail: { value } });
 const cancel = async id => (await page.cancelPlan({ currentTarget: { dataset: { id } } }));
 const visible = () => page.data.days.flatMap(day => day.plans);
 async function add(date, time) {
-  page.startAdding();
-  page.selectPlanDate(event(date));
+  page.selectWeek(event(date));
+  page.startAdding({ currentTarget: { dataset: { date } } });
   page.selectActivity(event('1'));
-  page.selectStartTime(event(time));
+  page.selectStartTime(event(time.split(':').map((value, index) => Number(value) / (index ? 10 : 1))));
   (await page.confirmAdding());
 }
 
@@ -63,9 +63,11 @@ assert.deepEqual(Array.from(visible(), plan => plan.id), ['2']);
 (await add('2026-09-30', '18:00'));
 assert.deepEqual(Array.from(visible(), plan => plan.id), ['2', '3']);
 
-(await add('2026-09-26', '11:59'));
-(await add('2026-09-26', '12:00'));
-(await add('2026-09-26', '12:01'));
+// 旧记录保留每分钟精度，用于检查过去、当前及刚好到时的保护。
+app.globalData.plans.push(...['11:59', '12:00', '12:01'].map((startTime, index) => ({
+  id: String(index + 4), date: '2026-09-26', activity: '跑步', startTime
+})));
+page.selectWeek(event('2026-09-26'));
 page._plans[1].result = { status: 'completed' }; // 仅测试已有结果保护。
 const beforeBlocked = JSON.stringify(page._plans);
 for (const id of [2, 4, 5, 999]) await cancel(id);

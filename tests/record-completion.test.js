@@ -90,8 +90,10 @@ const shared = runtime();
 const week = (await mount('week', shared));
 const todayDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 async function add(date, activity, startTime) {
-  week.startAdding();
-  week.updateDraft({ date, activity, startTime });
+  week.selectWeek({ detail: { value: date } });
+  week.startAdding({ currentTarget: { dataset: { date } } });
+  week.selectActivity({ detail: { value: String(week.data.activities.indexOf(activity)) } });
+  week.selectStartTime({ detail: { value: startTime.split(':').map((value, index) => Number(value) / (index ? 10 : 1)) } });
   (await week.confirmAdding());
 }
 (await add(todayDate, '跑步', '19:00'));

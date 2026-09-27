@@ -28,8 +28,10 @@ async function mount(name, app) {
   return page;
 }
 async function add(page, date, activity, startTime) {
-  page.startAdding();
-  page.updateDraft({ date, activity, startTime });
+  page.selectWeek({ detail: { value: date } });
+  page.startAdding({ currentTarget: { dataset: { date } } });
+  page.selectActivity({ detail: { value: String(page.data.activities.indexOf(activity)) } });
+  page.selectStartTime({ detail: { value: startTime.split(':').map((value, index) => Number(value) / (index ? 10 : 1)) } });
   (await page.confirmAdding());
 }
 const event = id => ({ currentTarget: { dataset: { id } } });

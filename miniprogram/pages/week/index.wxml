@@ -15,26 +15,25 @@
   </view>
   <view class="week-intro">
     <view class="week-title serif" role="heading" aria-level="1">{{title}}</view>
-    <view class="week-description">{{isCurrentWeek ? '这周的安排，都在这里。' : isNextWeek ? '周末想一想，给下周留几个小空档。' : '看看这一周的运动安排。'}}</view>
+    <view class="week-description">{{adding ? (editingId !== null ? '调整这一天的运动安排。' : '选好运动和时间，给这一天留个小空档。') : '点日期右侧的 ＋，给这一天安排运动。'}}</view>
     <view class="week-range">{{range}}</view>
   </view>
   <view wx:if="{{adding}}" class="plan-form">
     <view class="form-title" role="heading" aria-level="2">{{editingId !== null ? '修改运动安排' : '新增运动安排'}}</view>
-    <view class="form-hint">选择日期、项目和开始时间。</view>
-    <picker disabled="{{saving}}" id="plan-date" mode="date" value="{{draft.date}}" bindchange="selectPlanDate">
+    <picker wx:if="{{editingId !== null}}" disabled="{{saving}}" id="plan-date" mode="date" value="{{draft.date}}" bindchange="selectPlanDate">
       <view class="form-field" role="button" aria-label="日期，{{draft.date}}，点击选择"><text class="field-label">日期</text><text>{{draft.date}}</text></view>
     </picker>
+    <view wx:else class="form-field"><text class="field-label">日期</text><text>{{draftDateLabel}}</text></view>
     <picker disabled="{{saving}}" id="plan-activity" mode="selector" range="{{activities}}" value="{{activityIndex}}" bindchange="selectActivity">
       <view class="form-field" role="button" aria-label="项目，{{draft.activity || '请选择'}}，必填"><text class="field-label">项目</text><text class="{{draft.activity ? '' : 'field-placeholder'}}">{{draft.activity || '请选择项目'}}</text></view>
     </picker>
-    <picker disabled="{{saving}}" id="plan-time" mode="time" value="{{draft.startTime}}" bindchange="selectStartTime">
+    <picker disabled="{{saving}}" id="plan-time" mode="multiSelector" range="{{startTimeOptions}}" value="{{startTimeIndex}}" bindchange="selectStartTime">
       <view class="form-field" role="button" aria-label="开始时间，{{draft.startTime || '请选择'}}，必填"><text class="field-label">开始时间</text><text class="{{draft.startTime ? '' : 'field-placeholder'}}">{{draft.startTime || '请选择时间'}}</text></view>
     </picker>
     <view class="form-hint">{{editingId !== null ? '选好项目和未来的开始时间后，可确认修改。' : canConfirm ? '确认后会显示在对应日期。' : '选好项目和开始时间后，即可确认添加。'}}</view>
     <button class="plan-confirm primary-button" disabled="{{saving || (!canConfirm)}}" bindtap="confirmAdding" hover-class="button-pressed">{{editingId !== null ? '确认修改' : '确认添加'}}</button>
     <button disabled="{{saving}}" class="plan-cancel" bindtap="cancelAdding" hover-class="day-pressed">{{editingId !== null ? '放弃编辑' : '取消填写'}}</button>
   </view>
-  <button disabled="{{saving}}" wx:else class="plan-add primary-button" bindtap="startAdding" hover-class="button-pressed">新增运动安排</button>
   <view wx:if="{{!adding}}" class="week-list">
     <view wx:for="{{days}}" wx:key="date" class="day-group">
     <view class="day-row">
@@ -63,6 +62,7 @@
       <button disabled="{{saving}}" wx:if="{{plan.editable}}" class="plan-edit" data-id="{{plan.id}}" bindtap="cancelPlan" hover-class="day-pressed" aria-label="取消{{plan.date}} {{plan.startTime}}的{{plan.activity}}安排">取消安排</button>
     </view>
     </view>
+    <button class="day-add" disabled="{{saving}}" data-date="{{item.date}}" bindtap="startAdding" hover-class="day-pressed" aria-label="为{{item.weekday}} {{item.date}}添加运动"><view class="add-icon" aria-hidden="true"></view></button>
     </view>
     </view>
   </view>

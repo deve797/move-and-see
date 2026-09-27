@@ -156,8 +156,9 @@ for (const marked of [false, true, true, false]) {
 }
 
 (await setPeriod(reopened, true));
-week.startAdding();
-week.updateDraft({ date: '2026-09-26', activity: '瑜伽', startTime: '20:00' });
+week.startAdding(event('date', '2026-09-26'));
+week.selectActivity({ detail: { value: '0' } });
+week.selectStartTime({ detail: { value: [20, 0] } });
 (await week.confirmAdding());
 const added = app.globalData.plans[8];
 assert.equal(added.id, '9');

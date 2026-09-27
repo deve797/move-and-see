@@ -37,8 +37,9 @@ async function mount(name, app, query = {}) {
 test('new plan waits for server, rejects duplicate taps, preserves failed draft, and retries once', async () => {
   const app = createTestApp();
   const week = await mount('week', app);
-  week.startAdding();
-  week.updateDraft({ date: '2026-09-27', activity: '瑜伽', startTime: '19:00' });
+  week.startAdding(event('date', '2026-09-27'));
+  week.selectActivity({ detail: { value: '0' } });
+  week.selectStartTime({ detail: { value: [19, 2] } });
   const originalSave = app.savePlan;
   let reject;
   let calls = 0;
@@ -53,6 +54,9 @@ test('new plan waits for server, rejects duplicate taps, preserves failed draft,
   assert.equal(week.data.saving, false);
   assert.equal(week.data.adding, true);
   assert.equal(week.data.draft.activity, '瑜伽');
+  assert.equal(week.data.draft.date, '2026-09-27');
+  assert.equal(week.data.draft.startTime, '19:20');
+  assert.deepEqual(Array.from(week.data.startTimeIndex), [19, 2]);
   assert.match(week.data.saveError, /网络/);
   assert.equal(week.data.saveConflict, false);
   week.reloadAfterConflict();
@@ -63,6 +67,8 @@ test('new plan waits for server, rejects duplicate taps, preserves failed draft,
   assert.equal(week.data.adding, false);
   assert.equal(app.globalData.plans.length, 1);
   assert.equal(app.globalData.plans[0].version, 1);
+  assert.equal(app.globalData.plans[0].date, '2026-09-27');
+  assert.equal(app.globalData.plans[0].startTime, '19:20');
   assert.equal(typeof app.globalData.plans[0].id, 'string');
 });
 

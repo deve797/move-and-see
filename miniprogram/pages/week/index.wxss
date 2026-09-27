@@ -16,6 +16,12 @@
 .date-number { font-size: 12px; line-height: 1.6; color: #71746f; font-variant-numeric: tabular-nums; }
 .day-content { flex: 1; min-width: 0; margin-left: 16px; }
 .day-empty { display: flex; align-items: center; min-height: 43px; color: #71746f; font-size: 14px; line-height: 1.6; }
+.week-page .day-add { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; margin: 0 0 0 8px; padding: 0; border-radius: 22px; background: transparent; color: #50584d; }
+.week-page .day-add.day-pressed { background: #f4f6f2; }
+.add-icon { position: relative; width: 16px; height: 16px; }
+.add-icon::before, .add-icon::after { content: ""; position: absolute; background: currentColor; border-radius: 1px; }
+.add-icon::before { width: 16px; height: 1.5px; top: 7.25px; left: 0; }
+.add-icon::after { width: 1.5px; height: 16px; top: 0; left: 7.25px; }
 .week-actions { margin-top: 24px; }
 .week-page .week-next { width: 100%; min-height: 48px; border-radius: 24px; font-size: 16px; line-height: 1.5; }
 .week-page .week-current { width: 100%; min-height: 44px; margin-top: 8px; border-radius: 22px; background: transparent; color: #50584d; font-size: 15px; line-height: 44px; }
@@ -25,11 +31,11 @@
 .added-plan:last-child { margin-bottom: 0; }
 .added-label { color: #50584d; font-size: 12px; line-height: 1.6; }
 .period-badge { margin-top: 8px; color: #344c36; font-size: 14px; font-weight: 600; line-height: 1.6; }
-.added-content { display: flex; gap: 16px; margin-top: 4px; font-size: 16px; line-height: 1.6; font-weight: 600; }
-.added-time { font-variant-numeric: tabular-nums; }
+.added-content { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 4px; font-size: 16px; line-height: 1.6; font-weight: 600; }
+.added-time { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .plan-record { display: flex; align-items: center; min-height: 44px; margin-top: 4px; color: #344c36; font-size: 14px; line-height: 1.6; }
 .week-page .plan-edit { min-height: 44px; margin: 4px 0 0; padding: 0; background: transparent; color: #50584d; font-size: 14px; line-height: 44px; text-align: left; }
-.week-page .plan-add, .week-page .plan-confirm { width: 100%; min-height: 48px; margin-top: 20px; border-radius: 24px; font-size: 16px; line-height: 1.5; }
+.week-page .plan-confirm { width: 100%; min-height: 48px; margin-top: 20px; border-radius: 24px; font-size: 16px; line-height: 1.5; }
 .week-page .plan-confirm[disabled] { background: #e5e7e2; color: #62665e; }
 .plan-form { margin-top: 24px; }
 .form-title { font-size: 20px; line-height: 1.5; font-weight: 600; }

@@ -1,4 +1,6 @@
 const { currentMonday, nextMonday, weekPreview } = require('../../utils/week-preview');
+const HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0'));
+const MINUTES = ['00', '10', '20', '30', '40', '50'];
 function isFuture(plan, now) {
   return new Date(plan.date + 'T' + plan.startTime + ':00+08:00').getTime() > now.getTime();
 }
@@ -11,7 +13,8 @@ Page({
     days: [], selectedDate: '', title: '本周计划', range: '', isCurrentWeek: true, isNextWeek: false,
     loading: true, loadError: '', saving: false, saveError: '', saveConflict: false,
     adding: false, activities: ['瑜伽', '跑步', '力量训练', '徒步', '网球', '散步'],
-    draft: { date: '', activity: '', startTime: '' }, canConfirm: false, editingId: null, activityIndex: 0
+    draft: { date: '', activity: '', startTime: '' }, canConfirm: false, editingId: null, activityIndex: 0,
+    draftDateLabel: '', startTimeOptions: [HOURS.map(hour => hour + '时'), MINUTES.map(minute => minute + '分')], startTimeIndex: [0, 0]
   },
   onLoad() {
     this.setData({ selectedDate: currentMonday(new Date()) });
@@ -70,10 +73,13 @@ Page({
     wx.pageScrollTo({ scrollTop: 0, duration: 0 });
   },
   selectWeek(event) { this.renderWeek(event.detail.value); },
-  startAdding() {
+  startAdding(event) {
     if (this.data.loading || this.data.loadError || this.data.saving) return;
+    const day = this.data.days.find(item => item.date === event.currentTarget.dataset.date);
+    if (!day) return;
     this._editingPlan = { id: getApp().newPlanId(), version: 0 };
-    this.setData({ adding: true, editingId: null, activityIndex: 0, draft: { date: this.data.selectedDate, activity: '', startTime: '' }, canConfirm: false, saveError: '', saveConflict: false });
+    this.setData({ adding: true, editingId: null, activityIndex: 0, draft: { date: day.date, activity: '', startTime: '' }, draftDateLabel: day.weekday + ' · ' + day.date, startTimeIndex: [0, 0], canConfirm: false, saveError: '', saveConflict: false });
+    wx.pageScrollTo({ scrollTop: 0, duration: 0 });
   },
   startEditing(event) {
     if (this.data.saving) return;
@@ -118,17 +124,23 @@ Page({
   updateDraft(change) {
     if (this.data.saving) return;
     const draft = Object.assign({}, this.data.draft, change);
-    const canConfirm = Boolean(draft.date && this.data.activities.includes(draft.activity) && /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.startTime) && (this.data.editingId === null || isFuture(draft, new Date())));
-    this.setData({ draft, canConfirm, activityIndex: Math.max(0, this.data.activities.indexOf(draft.activity)) });
+    const validTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.startTime);
+    const canConfirm = Boolean(draft.date && this.data.activities.includes(draft.activity) && validTime && (this.data.editingId === null || isFuture(draft, new Date())));
+    const startTimeIndex = validTime ? [Number(draft.startTime.slice(0, 2)), Math.floor(Number(draft.startTime.slice(3)) / 10)] : [0, 0];
+    this.setData({ draft, canConfirm, startTimeIndex, activityIndex: Math.max(0, this.data.activities.indexOf(draft.activity)) });
   },
   selectPlanDate(event) {
-    if (this.data.saving) return;
+    if (this.data.saving || this.data.editingId === null) return;
     const date = event.detail.value;
     if (this._editingPlan && this._editingPlan.date !== date) this._draftDayVersion = getApp().getDay(date).version;
     this.updateDraft({ date });
   },
   selectActivity(event) { this.updateDraft({ activity: this.data.activities[Number(event.detail.value)] || '' }); },
-  selectStartTime(event) { this.updateDraft({ startTime: event.detail.value }); },
+  selectStartTime(event) {
+    const hour = HOURS[event.detail.value[0]];
+    const minute = MINUTES[event.detail.value[1]];
+    this.updateDraft({ startTime: hour && minute ? hour + ':' + minute : '' });
+  },
   cancelAdding() {
     if (this.data.saving) return;
     this._editingPlan = null;
