@@ -211,6 +211,7 @@ assert.equal(historical.data.periodExempt, true);
 assert.equal(historical.data.canCorrect, true);
 historical.startCorrection();
 chooseStatus(historical, 'completed');
+historical.selectActualDate({ detail: { value: '2026-09-26' } });
 (await historical.confirmCorrection());
 assert.equal(app.globalData.plans[0].result.status, 'completed');
 historical.startCorrection();

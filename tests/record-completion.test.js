@@ -6,12 +6,17 @@ const vm = require('node:vm');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 
+let now = '2026-09-26T04:00:00Z';
+class FixedDate extends Date {
+  constructor(...args) { super(...(args.length ? args : [now])); }
+}
+
 function runtime() { return createTestApp(); }
 async function mount(name, app, query = {}) {
   const file = path.resolve(__dirname, '../miniprogram/pages/' + name + '/index.js');
   let definition;
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), {
-    require: createRequire(file), getApp: () => prepareTestApp(app),
+    require: createRequire(file), Date: FixedDate, getApp: () => prepareTestApp(app),
     Page(value) { definition = value; },
     wx: { showToast() {}, pageScrollTo() {}, showToast() {} }
   });
@@ -28,7 +33,7 @@ const app = runtime();
 app.globalData.plans.push(
   { id: 1, date: '2026-09-26', activity: '跑步', startTime: '19:00' },
   { id: 2, date: '2026-09-26', activity: '跑步', startTime: '20:00' },
-  { id: 3, date: '2026-09-27', activity: '瑜伽', startTime: '07:00' }
+  { id: 3, date: '2026-09-26', activity: '瑜伽', startTime: '07:00' }
 );
 const original = JSON.stringify(app.globalData.plans);
 const record = (await mount('record', app, { planId: '1' }));
@@ -88,7 +93,7 @@ assert.equal((await mount('record', runtime(), { planId: '1' })).data.plan, null
 // 从已有新增流程建立安排，检查两个列表返回刷新以及完成后的编辑保护。
 const shared = runtime();
 const week = (await mount('week', shared));
-const todayDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const todayDate = '2026-09-26';
 async function add(date, activity, startTime) {
   week.selectWeek({ detail: { value: date } });
   week.startAdding({ currentTarget: { dataset: { date } } });
@@ -111,6 +116,10 @@ assert.equal((await mount('today', shared)).data.activities[1].completed, true);
 week.showNextWeek();
 const selectedWeek = week.data.selectedDate;
 (await add(selectedWeek, '网球', '18:00'));
+const futureRecord = await mount('record', shared, { planId: '3' });
+await futureRecord.confirmCompleted();
+assert.equal(shared.globalData.plans[2].result, undefined);
+now = selectedWeek + 'T04:00:00Z'; // 到安排当天后才能记录完成。
 (await (await mount('record', shared, { planId: '3' })).confirmCompleted());
 (await week.onShow());
 assert.equal(week.data.selectedDate, selectedWeek);

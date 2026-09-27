@@ -7,7 +7,6 @@
 .mood-page .mood-confirm { width: 100%; min-height: 52px; margin-top: 24px; border-radius: 26px; font-size: 18px; line-height: 1.4; }
 .mood-page .mood-back { width: 100%; min-height: 44px; margin-top: 20px; border-radius: 22px; background: transparent; color: #50584d; font-size: 15px; line-height: 44px; }
 .back-pressed { background: #f3f4f1; }
-.mood-demo { margin-top: 4px; color: #71746f; font-size: 12px; line-height: 1.7; text-align: center; }
 @media (max-width: 340px) {
   .mood-page { padding-top: 16px; }
   .mood-options { margin-top: 20px; }

@@ -7,21 +7,26 @@
   <button wx:if="{{saveConflict}}" disabled="{{saving}}" bindtap="reloadAfterConflict">放弃填写并重新读取</button>
   <view class="record-intro">
     <view class="record-title serif" role="heading" aria-level="1">{{plan ? (correcting ? '修正这次结果' : '记下这次运动') : '找不到这条安排'}}</view>
-    <view class="record-description">{{plan ? (periodExempt ? '这天的原安排与运动记录，都保留在这里。' : correcting ? '选好正确的结果，确认后更新。' : makeup ? '这条计划已补做，原未完成记录保留。' : recordingMakeup ? '记下后来实际运动的日期和项目。' : replacement ? '这条计划已记为替代完成。' : recordingReplacement ? '选择这次实际完成的运动，原计划会保留。' : completed ? '这条计划已记为按计划完成。' : incomplete ? '这条计划已记为未完成。' : recordingIncomplete ? '选择这次未完成的原因。' : '完成、替代完成或未完成，如实记下就好。') : '请返回计划列表选择一条有效安排。'}}</view>
+    <view wx:if="{{!plan}}" class="record-description">请返回计划列表选择一条安排。</view>
   </view>
   <view wx:if="{{periodExempt}}" class="period-notice" role="status">
     <view class="period-title">生理期免考核</view>
-    <view>这天未运动无需填写原因，可以直接返回。原安排和已有记录保留；实际做了运动也可以记下。</view>
   </view>
   <view wx:if="{{plan && !replacement && !recordingReplacement && !recordingIncomplete && !incomplete && !correcting}}" class="record-scene" aria-hidden="true">
     <image wx:if="{{!artFailed}}" class="walking-art" src="/assets/record-walking.jpg" mode="aspectFit" binderror="onArtError" />
   </view>
-  <view wx:if="{{plan}}" class="record-summary" aria-label="原计划{{plan.activity}}，{{plan.date}}，开始时间{{plan.startTime}}，{{makeup ? '已补做' + (selectedReason ? '，原未完成原因，' + selectedReason : '') : replacement ? '替代完成，实际' + plan.result.actualActivity : completed ? '已完成' : incomplete ? '未完成' + (selectedReason ? '，' + selectedReason : '') : '尚未记录'}}">
-    <view wx:if="{{replacement || recordingReplacement || makeup || recordingMakeup}}" class="activity-time">原计划</view>
+  <view wx:if="{{plan}}" class="record-summary" aria-label="原计划{{plan.activity}}，{{plan.date}}，开始时间{{plan.startTime}}，{{makeup || isLateCompletion ? '已补做' : replacement ? '替代完成，实际' + plan.result.actualActivity : completed ? '已完成' : incomplete ? '未完成' + (selectedReason ? '，' + selectedReason : '') : '尚未记录'}}">
     <view class="record-activity serif">{{plan.activity}}</view>
-    <view class="activity-time">{{plan.date}} · {{plan.startTime}}</view>
+    <view class="activity-time">计划：{{plan.date}} · {{plan.startTime}}</view>
+    <view wx:if="{{resultActualDate && !makeup && !correcting}}" class="actual-date-result">实际运动日期：{{resultActualDate}}</view>
   </view>
-  <view wx:if="{{replacement}}" class="replacement-result" role="status">替代完成 · 实际{{plan.result.actualActivity}}</view>
+  <view wx:if="{{plan && !futurePlan && needsActualDate && ((!plan.result && !recordingIncomplete) || (correcting && correctionStatus === 'completed'))}}" class="actual-date-form">
+    <view class="reason-heading">实际运动日期<text wx:if="{{correcting && completed && !plan.result.actualDate}}" class="reason-required">（选填）</text></view>
+    <picker disabled="{{saving}}" id="actual-date" mode="date" value="{{actualDate || plan.date}}" start="{{plan.date}}" end="{{makeupEndDate}}" bindchange="selectActualDate">
+      <view class="replacement-field" role="button" aria-label="实际运动日期，{{actualDate || '请选择'}}">{{actualDate || '请选择日期'}}</view>
+    </picker>
+  </view>
+  <view wx:if="{{replacement}}" class="replacement-result" role="status">{{isLateCompletion ? '已补做' : '替代完成'}} · 实际{{plan.result.actualActivity}}</view>
   <view wx:if="{{recordingReplacement}}" class="reason-form replacement-form">
     <view class="reason-heading">实际完成的运动<text class="reason-required">（必选）</text></view>
     <picker disabled="{{saving}}" id="replacement-activity" mode="selector" range="{{replacementActivities}}" value="{{replacementActivityIndex}}" bindchange="selectReplacementActivity">
@@ -33,12 +38,11 @@
   <view wx:if="{{incomplete && !correcting}}" class="incomplete-result" role="status">{{makeup ? '原未完成' : '未完成'}}{{selectedReason ? ' · ' + selectedReason : ''}}</view>
   <view wx:if="{{makeup}}" class="makeup-result" role="status">
     <view>已补做 · 实际{{makeup.actualActivity}}</view>
-    <view>补做日期 · {{makeup.date}}</view>
+    <view>实际运动日期：{{makeup.date}}</view>
   </view>
   <button disabled="{{saving}}" wx:if="{{canMakeup && !recordingMakeup && !correcting}}" class="record-next primary-button makeup-entry" bindtap="startMakeup" hover-class="button-pressed">为这条计划补做</button>
   <view wx:if="{{recordingMakeup}}" class="reason-form makeup-form">
     <view class="reason-heading">补做日期<text class="reason-required">（必选）</text></view>
-    <view class="running-hint">选择原计划当天至今天实际做过运动的日期。</view>
     <picker disabled="{{saving}}" id="makeup-date" mode="date" value="{{makeupDate || makeupEndDate}}" start="{{plan.date}}" end="{{makeupEndDate}}" bindchange="selectMakeupDate">
       <view class="replacement-field" role="button" aria-label="补做日期，{{makeupDate || '请选择'}}，必填">{{makeupDate || '请选择补做日期'}}</view>
     </picker>
@@ -74,7 +78,6 @@
   </view>
   <view wx:if="{{isRunning && !recordingReplacement && !recordingIncomplete && !incomplete && !correcting}}" class="running-form">
     <view class="reason-heading">跑步数据<text class="reason-required">（选填）</text></view>
-    <view class="running-hint">只填想记下的，留空也可以。</view>
     <label wx:for="{{runningFields}}" wx:key="key" class="running-field">
       <text class="running-label">{{item.label}}</text>
       <input disabled="{{saving}}" class="running-input" type="digit" value="{{runningData[item.key]}}" data-field="{{item.key}}" bindinput="inputRunningData" placeholder="选填" placeholder-class="running-placeholder" aria-label="{{item.label}}，{{item.unit}}，选填" />
@@ -87,21 +90,19 @@
     <view wx:if="{{runningError}}" class="running-error" role="alert">{{runningError}}</view>
     <button wx:if="{{completed}}" class="record-next primary-button confirm-running-data" disabled="{{saving || (!!runningError)}}" bindtap="confirmRunningData" hover-class="button-pressed">确认跑步数据</button>
   </view>
-  <button wx:if="{{plan && !replacement && !recordingReplacement && !recordingIncomplete && !incomplete && !correcting}}" class="record-next primary-button confirm-completed" disabled="{{saving || (!canComplete || (isRunning && !!runningError))}}" hover-class="button-pressed" bindtap="confirmCompleted" aria-label="{{completed ? '已完成' : '确认按计划完成，无需填写心情或其他内容'}}">
-    <text>{{completed ? '已完成' : '确认按计划完成'}}</text>
+  <button wx:if="{{plan && !replacement && !recordingReplacement && !recordingIncomplete && !incomplete && !correcting}}" class="record-next primary-button confirm-completed" disabled="{{saving || !canComplete || !actualDateValid || (isRunning && !!runningError)}}" hover-class="button-pressed" bindtap="confirmCompleted" aria-label="{{isLateCompletion ? '已补做' : completed ? '已完成' : futurePlan ? '当天可记录' : '确认已完成'}}">
+    <text>{{isLateCompletion ? '已补做' : completed ? '已完成' : futurePlan ? '当天可记录' : '确认已完成'}}</text>
   </button>
-  <button disabled="{{saving}}" wx:if="{{canComplete && !recordingIncomplete && !recordingReplacement}}" class="record-secondary replacement-entry" bindtap="startReplacement" hover-class="button-pressed">这次做了其他运动</button>
-  <button disabled="{{saving}}" wx:if="{{canComplete && !periodExempt && !recordingIncomplete && !recordingReplacement}}" class="record-secondary" bindtap="startIncomplete" hover-class="button-pressed">这次未完成</button>
+  <button disabled="{{saving}}" wx:if="{{canComplete && !recordingIncomplete && !recordingReplacement}}" class="record-secondary replacement-entry" bindtap="startReplacement" hover-class="button-pressed">做了其他运动</button>
+  <button disabled="{{saving}}" wx:if="{{canComplete && !periodExempt && !recordingIncomplete && !recordingReplacement}}" class="record-secondary" bindtap="startIncomplete" hover-class="button-pressed">未完成</button>
   <view wx:if="{{(completed || makeup) && !correcting}}" class="feeling-section">
-    <view class="reason-heading">{{makeup ? '这次补做体感' : '这次运动体感'}}<text class="reason-required">（选填）</text></view>
-    <view class="feeling-hint">可不填，点选即可修改。</view>
+    <view class="reason-heading">{{makeup || isLateCompletion ? '这次补做体感' : '这次运动体感'}}<text class="reason-required">（选填）</text></view>
     <view class="reason-options feeling-options" role="group" aria-label="这次运动体感，选填，单选">
       <button disabled="{{saving}}" wx:for="{{feelingOptions}}" wx:key="*this" class="reason-option {{selectedFeeling === item ? 'reason-selected' : ''}}" data-feeling="{{item}}" bindtap="selectFeeling" hover-class="button-pressed" aria-pressed="{{selectedFeeling === item}}">{{item}}</button>
     </view>
     <button disabled="{{saving}}" wx:if="{{selectedFeeling}}" class="record-secondary feeling-clear" data-feeling="" bindtap="selectFeeling" hover-class="button-pressed">清空体感</button>
   </view>
-  <navigator wx:if="{{(completed || makeup) && !correcting}}" class="record-secondary after-mood-entry" url="/pages/mood/index?planId={{plan.id}}{{makeup ? '&makeup=1' : ''}}" hover-class="button-pressed">{{makeup ? '补做后的感受（选填）' : '运动后感受（选填）'}}</navigator>
+  <navigator wx:if="{{(completed || makeup) && !correcting}}" class="record-secondary after-mood-entry" url="/pages/mood/index?planId={{plan.id}}{{makeup ? '&makeup=1' : ''}}" hover-class="button-pressed">{{makeup || isLateCompletion ? '补做后的感受（选填）' : '运动后感受（选填）'}}</navigator>
   <button disabled="{{saving}}" wx:if="{{canCorrect && !correcting && !recordingMakeup}}" class="record-secondary correction-entry" bindtap="startCorrection" hover-class="button-pressed">修正结果</button>
-  <view class="record-demo">安排、结果、感受、跑步数据和生理期标记保存成功后，可在重新打开时查看。</view>
   </block>
 </view>

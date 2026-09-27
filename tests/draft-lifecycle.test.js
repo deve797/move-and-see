@@ -237,7 +237,7 @@ test('makeup after-mood draft preserves deliberate clearing through resume and s
   assert.equal(app.globalData.plans[0].result.afterMoodNote, undefined);
 });
 
-test('resume after a lost save response retries the original request without a second write', async () => {
+test('same-day completion retries a lost response across midnight with the original date and request', async () => {
   const createStore = require('../miniprogram/utils/cloud-store');
   const state = { plans: [], periodDays: {}, periodWalks: {}, dayVersions: {}, cloudLoaded: false };
   let stored = plan();
@@ -256,11 +256,14 @@ test('resume after a lost save response retries the original request without a s
     }
     return { result: { ok: true, data: receipts.get(data.requestId) } };
   } }, state, 'test-env');
-  const record = await mount('record', { globalData: state, ...store });
+  const clock = { now: '2026-09-26T15:59:59Z' };
+  const record = await mount('record', { globalData: state, ...store }, clock);
   record.inputRunningData({ ...event('field', 'distanceKm'), ...input('5') });
   await record.confirmCompleted();
   assert.match(record.data.saveError, /网络/);
+  clock.now = '2026-09-26T16:00:00Z';
   await record.onShow();
+  assert.equal(record.data.actualDate, '2026-09-26');
   assert.equal(state.plans[0].version, 2);
   assert.equal(record._plan.version, 1);
   assert.equal(record.data.runningData.distanceKm, '5');
@@ -268,5 +271,9 @@ test('resume after a lost save response retries the original request without a s
   assert.equal(record.data.completed, true);
   assert.equal(record.data.saveError, '');
   assert.equal(requests[0].requestId, requests[1].requestId);
+  assert.equal(requests[0].expectedVersion, 1);
+  assert.equal(requests[1].expectedVersion, 1);
+  assert.equal(requests[0].plan.result.actualDate, '2026-09-26');
+  assert.equal(requests[1].plan.result.actualDate, '2026-09-26');
   assert.equal(writes, 1);
 });

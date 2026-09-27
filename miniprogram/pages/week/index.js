@@ -1,4 +1,5 @@
 const { currentMonday, nextMonday, weekPreview } = require('../../utils/week-preview');
+const { resultCategory, actualExerciseDate } = require('../../utils/exercise-result');
 const HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0'));
 const MINUTES = ['00', '10', '20', '30', '40', '50'];
 function isFuture(plan, now) {
@@ -55,6 +56,8 @@ Page({
     preview.days = preview.days.map(day => Object.assign({}, day, {
       periodWalk: getApp().getDay(day.date).periodWalk || null,
       plans: this._plans.filter(plan => plan.date === day.date && !plan.cancelled).map(plan => Object.assign({}, plan, {
+        resultCategory: resultCategory(plan), actualDate: actualExerciseDate(plan),
+        actualActivity: plan.result && (plan.result.makeup ? plan.result.makeup.actualActivity : plan.result.status === 'replacement' ? plan.result.actualActivity : plan.activity),
         editable: canEdit(plan, now),
         periodExempt: (getApp().globalData.periodDays || {})[plan.date] === true,
         pendingRecord: !plan.result && !isFuture(plan, now) && (getApp().globalData.periodDays || {})[plan.date] !== true

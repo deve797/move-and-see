@@ -1,4 +1,5 @@
 const formatRunningPace = require('../../utils/running-pace');
+const { resultCategory, actualExerciseDate } = require('../../utils/exercise-result');
 const runningFields = [
   { key: 'durationMinutes', label: '时长', unit: '分钟' },
   { key: 'distanceKm', label: '距离', unit: '公里' },
@@ -44,6 +45,8 @@ Page({
     loading: true, loadError: '', saving: false, saveError: '', saveConflict: false,
     incomplete: false, recordingIncomplete: false, selectedReason: '', canConfirmIncomplete: false,
     replacement: false, recordingReplacement: false, actualActivity: '', canConfirmReplacement: false,
+    actualDate: '', actualDateChosen: false, actualDateValid: false, needsActualDate: false,
+    resultActualDate: '', isLateCompletion: false, futurePlan: false,
     makeup: null, canMakeup: false, recordingMakeup: false, makeupDate: '', makeupActivity: '',
     makeupActivityIndex: 0, canConfirmMakeup: false, makeupEndDate: '',
     replacementActivities: ['瑜伽', '跑步', '力量训练', '徒步', '网球', '散步'], replacementActivityIndex: 0,
@@ -61,10 +64,11 @@ Page({
       const result = this._plan && this._plan.result;
       const savedRunning = runningValues(this._plan && this._plan.activity === '跑步' && result && result.status === 'completed' ? result.runningData : undefined);
       const keepDraft = this._plan && (this.data.saveError || this.data.recordingIncomplete || this.data.recordingReplacement || this.data.recordingMakeup || this.data.correcting ||
+        (this.data.actualDateChosen && this.data.actualDate !== (result && result.actualDate || '')) ||
         runningFields.some(field => this.data.runningData[field.key] !== savedRunning[field.key]));
       // 保留输入对应的旧版本；返回时若云端已更新，提交仍需通过版本校验。
       if (!keepDraft) this.refreshPlan();
-      else this.setData({ makeupEndDate: todayDate() });
+      else this.syncActualDateState();
     } catch (error) {
       this.setData({ loadError: error.message || '暂时无法读取记录，请重试。' });
     } finally {
@@ -87,6 +91,7 @@ Page({
           recordingReplacement: false, actualActivity: '', canConfirmReplacement: false,
           recordingMakeup: false, makeupDate: '', makeupActivity: '', canConfirmMakeup: false,
           correcting: false, correctionStatus: '', correctionReason: '', canConfirmCorrection: false,
+          actualDate: '', actualDateChosen: false,
           runningData: runningValues(), runningError: '', runningPace: '', saveError: '', saveConflict: false
         });
         await this.onShow();
@@ -108,11 +113,15 @@ Page({
       periodExempt: isPeriodExempt(plan),
       completed: Boolean(result && result.status === 'completed'),
       replacement: Boolean(result && result.status === 'replacement'),
+      resultActualDate: actualExerciseDate(plan),
+      isLateCompletion: Boolean(result && !makeup && resultCategory(plan) === 'makeup'),
+      actualDate: result && result.actualDate || (plan && plan.date === todayDate() ? todayDate() : ''),
+      actualDateChosen: Boolean(result && result.actualDate),
       makeup, canMakeup: canMakeup(plan), recordingMakeup: false, makeupDate: '', makeupActivity: '',
       makeupActivityIndex: 0, canConfirmMakeup: false, makeupEndDate: todayDate(),
       recordingReplacement: false, actualActivity: '', canConfirmReplacement: false, replacementActivityIndex: 0,
       selectedFeeling: (makeup || (result && result.status === 'completed')) && this.data.feelingOptions.includes(motion.feeling) ? motion.feeling : '',
-      canComplete: Boolean(plan && !result),
+      canComplete: Boolean(plan && !result && plan.date <= todayDate()),
       isRunning: Boolean(plan && plan.activity === '跑步' && (!result || result.status !== 'replacement')),
       runningData,
       runningPace: formatRunningPace(runningData.durationMinutes, runningData.distanceKm),
@@ -122,6 +131,32 @@ Page({
       recordingIncomplete: false, canConfirmIncomplete: false,
       canCorrect: canCorrect(plan), correcting: false, correctionStatus: '', correctionReason: '', canConfirmCorrection: false
     });
+    this.syncActualDateState();
+  },
+  syncActualDateState(change = {}) {
+    const plan = this.data.plan;
+    const today = todayDate();
+    const result = plan && plan.result;
+    const chosen = change.actualDateChosen === undefined ? this.data.actualDateChosen : change.actualDateChosen;
+    const needsActualDate = Boolean(plan && plan.date < today);
+    let actualDate = change.actualDate === undefined ? this.data.actualDate : change.actualDate;
+    if (needsActualDate && !chosen) actualDate = '';
+    if (!chosen && plan && plan.date === today) actualDate = today;
+    const actualDateValid = Boolean(plan && validMakeupDate(actualDate, plan.date));
+    const needsCorrectionDate = result && (result.status !== 'completed' || result.actualDate || chosen);
+    this.setData({
+      ...change, actualDate, actualDateChosen: chosen, actualDateValid, needsActualDate,
+      makeupEndDate: today, futurePlan: Boolean(plan && plan.date > today),
+      canComplete: Boolean(plan && !result && plan.date <= today),
+      canConfirmReplacement: Boolean(this.data.actualActivity && actualDateValid),
+      canConfirmCorrection: this.data.correctionStatus === 'completed'
+        ? !needsCorrectionDate || actualDateValid
+        : this.data.periodExempt || this.data.reasonOptions.includes(this.data.correctionReason)
+    });
+  },
+  selectActualDate(event) {
+    if (this.data.saving) return;
+    this.syncActualDateState({ actualDate: event.detail.value, actualDateChosen: true });
   },
   draftPlan() {
     return this._plan && !this.data.saving && !this.data.loading && !this.data.loadError ? JSON.parse(JSON.stringify(this._plan)) : null;
@@ -184,12 +219,14 @@ Page({
       correcting: true, correctionStatus: result.status, correctionReason: reason,
       canConfirmCorrection: result.status === 'completed' || this.data.periodExempt || this.data.reasonOptions.includes(reason)
     });
+    this.syncActualDateState();
     wx.pageScrollTo({ scrollTop: 0, duration: 0 });
   },
   selectCorrectionStatus(event) {
     const status = event.currentTarget.dataset.status;
     if (this.data.saving || !this.data.correcting || !['completed', 'incomplete'].includes(status) || status === this.data.correctionStatus) return;
     this.setData({ correctionStatus: status, correctionReason: '', canConfirmCorrection: status === 'completed' || this.data.periodExempt });
+    this.syncActualDateState();
   },
   selectCorrectionReason(event) {
     const reason = event.currentTarget.dataset.reason;
@@ -203,10 +240,15 @@ Page({
     if (!canCorrect(plan)) return;
     const status = this.data.correctionStatus;
     const reason = this.data.correctionReason;
+    this.syncActualDateState();
+    if (!this.data.canConfirmCorrection) return;
     if (status !== 'completed' && !(status === 'incomplete' && (this.data.reasonOptions.includes(reason) || (this.data.periodExempt && reason === '')))) return;
     if (status !== plan.result.status || (status === 'incomplete' && reason !== plan.result.reason)) {
-      plan.result = status === 'completed' ? { status } : { status, reason };
+      plan.result = status === 'completed' ? { status, actualDate: this.data.actualDate } : { status, reason };
+    } else if (status === 'completed' && this.data.actualDateChosen) {
+      plan.result.actualDate = this.data.actualDate;
     }
+    if (plan.result.status === 'completed' && plan.result.actualDate) this.setData({ actualDateChosen: true });
     await this.persistPlan(plan);
   },
   startIncomplete() {
@@ -224,7 +266,7 @@ Page({
   async confirmIncomplete() {
     if (!this.data.recordingIncomplete || this.data.periodExempt || !this.data.reasonOptions.includes(this.data.selectedReason)) return;
     const plan = this.draftPlan();
-    if (!plan || plan.result) return;
+    if (!plan || plan.result || plan.date > todayDate()) return;
     plan.result = { status: 'incomplete', reason: this.data.selectedReason };
     await this.persistPlan(plan);
   },
@@ -256,9 +298,11 @@ Page({
   },
   startReplacement() {
     if (this.data.saving) return;
+    const dateDraft = { actualDate: this.data.actualDate, actualDateChosen: this.data.actualDateChosen };
     this.refreshPlan();
     if (!this.data.canComplete) return;
     this.setData({ recordingReplacement: true });
+    if (dateDraft.actualDateChosen) this.syncActualDateState(dateDraft);
     wx.pageScrollTo({ scrollTop: 0, duration: 0 });
   },
   cancelReplacement() { this.refreshPlan(); },
@@ -267,23 +311,33 @@ Page({
     const index = Number(event.detail.value);
     const actualActivity = this.data.replacementActivities[index] || '';
     this.setData({ actualActivity, replacementActivityIndex: actualActivity ? index : 0, canConfirmReplacement: Boolean(actualActivity) });
+    this.syncActualDateState();
   },
   async confirmReplacement() {
     if (!this.data.recordingReplacement || !this.data.replacementActivities.includes(this.data.actualActivity)) return;
     const plan = this.draftPlan();
     if (!plan || plan.result) return;
-    plan.result = { status: 'replacement', actualActivity: this.data.actualActivity };
+    this.syncActualDateState();
+    if (!this.data.actualDateValid) return;
+    this.setData({ actualDateChosen: true });
+    plan.result = { status: 'replacement', actualActivity: this.data.actualActivity, actualDate: this.data.actualDate };
     await this.persistPlan(plan);
   },
   async confirmCompleted() {
-    if (this.data.recordingReplacement) return;
+    if (this.data.recordingReplacement || this.data.recordingIncomplete || this.data.correcting || this.data.recordingMakeup) return;
     const plan = this.draftPlan();
     if (!plan || plan.result) return;
+    this.syncActualDateState();
+    if (!this.data.actualDateValid) {
+      wx.showToast({ title: this.data.futurePlan ? '当天才可记录结果' : '请选择实际运动日期', icon: 'none' });
+      return;
+    }
     const values = runningValues(this.data.runningData);
     const error = plan.activity === '跑步' ? runningError(values) : '';
     this.setData({ runningError: error });
     if (error) return;
-    plan.result = { status: 'completed' };
+    this.setData({ actualDateChosen: true });
+    plan.result = { status: 'completed', actualDate: this.data.actualDate };
     if (plan.activity === '跑步') plan.result.runningData = values;
     await this.persistPlan(plan);
   },

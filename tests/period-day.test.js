@@ -203,7 +203,7 @@ const replacement = (await mount('record', voluntaryApp, 2));
 replacement.startReplacement();
 replacement.selectReplacementActivity({ detail: { value: '5' } });
 (await replacement.confirmReplacement());
-assert.deepEqual(plain(voluntaryApp.globalData.plans[1].result), { status: 'replacement', actualActivity: '散步' });
+assert.deepEqual(plain(voluntaryApp.globalData.plans[1].result), { status: 'replacement', actualActivity: '散步', actualDate: '2026-09-26' });
 const voluntaryResults = JSON.stringify(voluntaryApp.globalData.plans);
 (await setPeriod(voluntaryToday, false));
 assert.equal(JSON.stringify(voluntaryApp.globalData.plans), voluntaryResults);

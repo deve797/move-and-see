@@ -45,9 +45,10 @@ function runningData(source) {
   return result;
 }
 function resultFields(source, activity) {
-  object(source, ['status', 'reason', 'actualActivity', 'afterMood', 'afterMoodNote', 'feeling', 'runningData', 'makeup']);
+  object(source, ['status', 'reason', 'actualActivity', 'actualDate', 'afterMood', 'afterMoodNote', 'feeling', 'runningData', 'makeup']);
   const status = choice(source.status, ['completed', 'incomplete', 'replacement']);
   const result = { status };
+  if (source.actualDate !== undefined) result.actualDate = date(source.actualDate);
   if (status === 'completed') {
     ensure(source.reason === undefined && source.actualActivity === undefined && source.makeup === undefined);
     motionFields(source, result);
@@ -56,7 +57,7 @@ function resultFields(source, activity) {
       result.runningData = runningData(source.runningData);
     }
   } else if (status === 'replacement') {
-    object(source, ['status', 'actualActivity']);
+    object(source, ['status', 'actualActivity', 'actualDate']);
     result.actualActivity = choice(source.actualActivity, activities);
   } else {
     object(source, ['status', 'reason', 'makeup']);
@@ -113,6 +114,9 @@ function checkPlan(next, previous, day, now) {
     transition(!result, '调整安排和记录结果请分别进行');
   }
   if (!result) { transition(!oldResult, '已有运动结果不能删除'); return; }
+  if (!oldResult || oldResult.status !== result.status) {
+    transition(next.date <= today(now), '未到安排日期，不能记录运动结果');
+  }
   if (oldResult && oldResult.status === 'replacement') {
     transition(equal(oldResult, result), '替代完成结果暂不支持修正');
     return;
@@ -123,6 +127,13 @@ function checkPlan(next, previous, day, now) {
   }
   if (oldResult && oldResult.status !== result.status) {
     transition(['completed', 'incomplete'].includes(result.status), '已有结果不能改为替代完成');
+  }
+  if (['completed', 'replacement'].includes(result.status)) {
+    const legacyDate = oldResult && oldResult.status === result.status && oldResult.actualDate === undefined;
+    transition(result.actualDate !== undefined || legacyDate, '请选择实际运动日期');
+    if (result.actualDate !== undefined) {
+      transition(result.actualDate >= next.date && result.actualDate <= today(now), '实际运动日期须在原计划当天至今天之间');
+    }
   }
   if (result.status === 'incomplete') {
     const changedReason = !oldResult || oldResult.status !== 'incomplete' || result.reason !== oldResult.reason;

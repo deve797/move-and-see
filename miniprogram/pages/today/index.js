@@ -1,5 +1,6 @@
 const moodOptions = require('../../utils/mood-options');
 const weeklyProgress = require('../../utils/weekly-progress');
+const { resultCategory, actualExerciseDate } = require('../../utils/exercise-result');
 function todayDate() {
   return new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
@@ -63,6 +64,8 @@ Page({
           id: plan.id, name: plan.activity, time: plan.startTime, periodExempt: periodMarked,
           completed: Boolean(plan.result && (['completed', 'replacement'].includes(plan.result.status) || (plan.result.status === 'incomplete' && plan.result.makeup))),
           result: plan.result || null,
+          resultCategory: resultCategory(plan), actualDate: actualExerciseDate(plan),
+          actualActivity: plan.result && (plan.result.makeup ? plan.result.makeup.actualActivity : plan.result.status === 'replacement' ? plan.result.actualActivity : plan.activity),
           kind: plan.activity === '瑜伽' ? 'yoga' : plan.activity === '跑步' ? 'running' : '',
           beforeMood: option ? option.value : '', beforeMoodLabel: option ? option.label : '',
           beforeMoodNote: plan.beforeMoodNote || ''

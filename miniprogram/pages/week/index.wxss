@@ -4,7 +4,6 @@
 .week-header .brand { align-self: center; }
 .week-intro { margin-top: 27px; }
 .week-title { font-size: 80rpx; font-weight: 700; line-height: 1.3; letter-spacing: -1px; }
-.week-description { margin-top: 13px; color: #71746f; font-size: 16px; line-height: 1.7; }
 .week-range { margin-top: 12px; color: #71746f; font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
 .week-list { margin-top: 10px; }
 .day-group { border-bottom: 1px solid #eff0ed; }
@@ -26,7 +25,6 @@
 .week-page .week-next { width: 100%; min-height: 48px; border-radius: 24px; font-size: 16px; line-height: 1.5; }
 .week-page .week-current { width: 100%; min-height: 44px; margin-top: 8px; border-radius: 22px; background: transparent; color: #50584d; font-size: 15px; line-height: 44px; }
 .week-page .week-current.day-pressed { background: #f4f6f2; }
-.demo-note { margin-top: 20px; color: #71746f; font-size: 12px; line-height: 1.7; }
 .added-plan { padding: 12px 16px; margin-bottom: 12px; background: #f4f6f2; border-radius: 12px; }
 .added-plan:last-child { margin-bottom: 0; }
 .added-label { color: #50584d; font-size: 12px; line-height: 1.6; }
@@ -46,7 +44,6 @@
 .week-page .plan-cancel { min-height: 44px; margin-top: 8px; background: transparent; border-radius: 22px; color: #50584d; font-size: 15px; line-height: 44px; }
 @media (max-width: 340px) {
   .week-intro { margin-top: 22px; }
-  .week-description { font-size: 14px; }
   .day-row { min-height: 70px; }
   .day-date { width: 47px; }
 }

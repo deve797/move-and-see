@@ -2,7 +2,6 @@
 .review-header { display: flex; align-items: center; min-height: 44px; padding: 0 8rpx; }
 .review-intro { margin: 27px 8rpx 20px; }
 .review-title { font-size: 80rpx; line-height: 1.3; font-weight: 700; letter-spacing: -1px; }
-.review-description { margin-top: 13px; color: #71746f; font-size: 16px; line-height: 1.7; }
 .review-card { background: #f3f4f1; border-radius: 16px; }
 .chart-card { margin-top: 24px; padding: 22px 20px 20px; }
 .card-heading { font-size: 18px; font-weight: 600; line-height: 1.5; }
@@ -27,8 +26,7 @@
 .summary-number { font-size: 38px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .summary-unit { font-size: 19px; }
 .summary-detail { color: #686d65; font-size: 13px; line-height: 1.5; white-space: nowrap; }
-.results-scope { margin: 14px 8rpx; color: #686d65; font-size: 13px; line-height: 1.7; }
-.results-empty { padding: 24px 20px; color: #686d65; font-size: 15px; line-height: 1.8; }
+.results-empty { margin-top: 16px; padding: 24px 20px; color: #686d65; font-size: 15px; line-height: 1.8; }
 .result-group { margin-top: 16px; padding: 20px; }
 .result-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .result-count { flex-shrink: 0; font-size: 16px; font-variant-numeric: tabular-nums; }
@@ -36,10 +34,8 @@
 .result-plan { display: block; margin-top: 16px; padding-top: 16px; border-top: 1px solid #dfe3da; }
 .result-activity { font-size: 16px; font-weight: 600; line-height: 1.6; }
 .result-detail { margin-top: 5px; color: #686d65; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
-.mood-detail { margin-top: 8px; color: #686d65; font-size: 14px; line-height: 1.6; }
 .mood-summary { margin-top: 16px; padding: 20px; }
 .mood-summary-header { display: flex; align-items: center; min-height: 72px; }
-.notes-caption { color: #686d65; font-size: 12px; line-height: 1.6; }
 .mood-summary .mood-notes-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; margin-top: 16px; border-top: 1px solid #dfe3da; border-radius: 0; background: transparent; color: #3e523c; font-size: 14px; line-height: 1.6; text-align: left; }
 .notes-chevron { flex-shrink: 0; width: 7px; height: 7px; margin-right: 3px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); }
 .notes-chevron.is-expanded { transform: translateY(2px) rotate(225deg); }
@@ -59,12 +55,10 @@
 .bulb-filament::after { content: ""; position: absolute; left: 1px; top: 4px; width: 1.5px; height: 13px; background: #20211f; }
 .bulb-neck { position: absolute; left: 22px; top: 46px; width: 16px; height: 2px; background: #20211f; border-radius: 1px; }
 .bulb-base { position: absolute; left: 25px; top: 51px; width: 10px; height: 2px; background: #20211f; border-radius: 1px; }
-.review-demo { margin: 20px 8rpx 0; color: #71746f; font-size: 12px; line-height: 1.7; text-align: center; }
 .review-page .review-back { width: 100%; min-height: 44px; margin-top: 8px; border-radius: 22px; background: transparent; color: #50584d; font-size: 15px; line-height: 44px; }
 .back-pressed { background: #f3f4f1; }
 @media (max-width: 340px) {
   .review-intro { margin-top: 22px; }
-  .review-description { font-size: 14px; }
   .chart-card { padding: 20px 16px 18px; }
   .chart-plot { height: 150px; }
   .card-heading { font-size: 17px; }
@@ -73,7 +67,6 @@
   .summary-number { font-size: 36px; }
   .summary-line { flex-wrap: wrap; }
   .result-group, .results-empty { padding: 18px 16px; }
-  .mood-detail { font-size: 13px; }
   .mood-summary { padding: 18px 16px; }
   .mood-summary-header { min-height: 70px; }
   .note-line { gap: 10px; }

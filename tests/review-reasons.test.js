@@ -52,6 +52,7 @@ async function correct(page, status, reason) {
   page.startCorrection();
   page.selectCorrectionStatus(event('status', status));
   if (reason) page.selectCorrectionReason(event('reason', reason));
+  if (status === 'completed') page.selectActualDate({ detail: { value: page.data.plan.date } });
   (await page.confirmCorrection());
 }
 async function makeup(page, date) {
@@ -102,6 +103,7 @@ const first = (await recordIncomplete(app, 1, '加班'));
 const second = (await recordIncomplete(app, 2, '加班'));
 const rain = (await recordIncomplete(app, 3, '下雨'));
 const completed = (await mount('record', app, 4));
+completed.selectActualDate({ detail: { value: completed.data.plan.date } });
 (await completed.confirmCompleted());
 const initial = [group('加班', 2), group('下雨', 1)];
 (await check(review, app, initial)); // 按计划日期排序，不按全局数组插入顺序。

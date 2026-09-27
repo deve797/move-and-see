@@ -2,7 +2,6 @@
   <view class="review-header"><view class="brand serif">Move&See</view></view>
   <view class="review-intro">
     <view class="review-title serif" role="heading" aria-level="1">本周回看</view>
-    <view class="review-description">这周怎么动的？翻翻看。</view>
   </view>
   <view wx:if="{{cloudLoading}}" class="result-detail" role="status">正在读取云端记录…</view>
   <view wx:elif="{{cloudError}}" class="result-detail" role="alert">
@@ -17,37 +16,32 @@
       <view class="summary-line"><view class="summary-value"><text class="summary-number serif">{{weeklyProgress.completed}}</text><text class="summary-unit">次</text></view><view class="summary-detail">{{weeklyProgress.total ? '应完成 ' + weeklyProgress.total + ' 次' : '本周无考核计划'}}</view></view>
     </view>
   </view>
-  <view class="results-scope">北京时间 · 周一至周日，按原计划日期归属。完成进度及结果分类不计入免考核计划，待记录计划不列入结果分类。</view>
-  <view wx:if="{{!hasResults}}" class="review-card results-empty" role="status">{{weeklyProgress.total ? '本周还没有运动结果，记录后可以在这里回看。' : '本周暂无可回看的结果。'}}</view>
+  <view wx:if="{{!hasResults}}" class="review-card results-empty" role="status">本周暂无运动结果</view>
   <block wx:else>
     <view wx:for="{{resultGroups}}" wx:for-item="group" wx:key="key" class="review-card result-group">
       <view class="result-heading"><view class="card-heading" role="heading" aria-level="2">{{group.label}}</view><text class="result-count">{{group.plans.length}} 次</text></view>
-      <view wx:if="{{!group.plans.length}}" class="result-none">暂无这类结果</view>
       <navigator wx:for="{{group.plans}}" wx:for-item="plan" wx:key="id" class="result-plan" url="/pages/record/index?planId={{plan.id}}" hover-class="back-pressed" aria-label="查看{{plan.date}} {{plan.startTime}} {{plan.activity}}，{{group.label}}">
         <view class="result-activity">{{plan.activity}}</view>
         <view class="result-detail">原计划 · {{plan.date}} {{plan.startTime}}</view>
-        <view wx:if="{{group.key === 'replacement'}}" class="result-detail">实际完成 · {{plan.result.actualActivity}}</view>
+        <view wx:if="{{group.key === 'completed' && plan.actualDate}}" class="result-detail">实际完成 · {{plan.actualDate}}</view>
+        <view wx:if="{{group.key === 'replacement'}}" class="result-detail">实际完成{{plan.actualDate ? ' · ' + plan.actualDate : ''}} · {{plan.actualActivity}}</view>
         <block wx:if="{{group.key === 'makeup'}}">
-          <view class="result-detail">补做 · {{plan.result.makeup.date}} · {{plan.result.makeup.actualActivity}}</view>
-          <view class="result-detail">原未完成{{plan.result.reason ? ' · ' + plan.result.reason : ''}}</view>
+          <view class="result-detail">补做 · {{plan.actualDate}} · {{plan.actualActivity}}</view>
+          <view wx:if="{{plan.result.status === 'incomplete'}}" class="result-detail">原未完成{{plan.result.reason ? ' · ' + plan.result.reason : ''}}</view>
         </block>
         <view wx:if="{{group.key === 'incomplete'}}" class="result-detail">未完成{{plan.result.reason ? ' · ' + plan.result.reason : ''}}</view>
       </navigator>
     </view>
   </block>
-  <view class="review-card result-group reason-summary">
+  <view wx:if="{{reasonGroups.length}}" class="review-card result-group reason-summary">
     <view class="card-heading" role="heading" aria-level="2">未完成原因</view>
-    <view class="result-detail">按原未完成原因统计，已补做仍计入原原因；生理期免考核也保留已填写的原因。</view>
-    <view wx:if="{{!reasonGroups.length}}" class="result-none" role="status">本周还没有已填写的未完成原因。</view>
     <view wx:for="{{reasonGroups}}" wx:key="reason" class="result-plan reason-row">
       <view class="result-heading"><text class="result-activity">{{item.reason}}</text><text class="result-count">{{item.count}} 次</text></view>
       <view class="result-detail">其中已补做 {{item.makeupCount}} 次</view>
     </view>
   </view>
-  <view class="review-demo">本周结果和原因分布来自已保存的运动记录。</view>
   <view class="review-card chart-card">
     <view class="card-heading" role="heading" aria-level="2">最近四周完成率</view>
-    <view class="result-detail">北京时间 · 周一至周日，以周一日期标示。完成数 / 有效计划数，百分比四舍五入到整数。</view>
     <view class="chart-plot">
       <view wx:for="{{weeks}}" wx:key="startDate" class="chart-column" aria-label="{{item.startDate}}至{{item.endDate}}，{{item.isCurrent ? '本周进行中，' : ''}}{{item.total ? item.rate + '%，完成' + item.completed + '次，有效计划' + item.total + '次' : item.emptyLabel}}">
         <view class="bar-value {{!item.total ? 'bar-empty' : ''}}">{{item.total ? item.rate + '%' : item.emptyLabel}}</view>
@@ -61,28 +55,23 @@
         <view wx:if="{{item.isCurrent}}" class="week-current">进行中</view>
       </view>
     </view>
-    <view class="result-detail">未来计划计入分母；取消及免考核计划不计入。跨周补做更新原计划周。</view>
-    <view class="result-detail">来自已保存的运动记录。过去周没有计划记录时显示“无数据”。</view>
   </view>
   <view id="mood-summary" class="review-card mood-summary">
     <view class="mood-summary-header">
       <view class="summary-icon bulb-icon" aria-hidden="true"><view class="bulb-head"><view class="bulb-filament"></view></view><view class="bulb-neck"></view><view class="bulb-base"></view></view>
-      <view class="summary-copy"><view class="card-heading" role="heading" aria-level="2">前后心情变化</view><view class="mood-detail">有效样本 {{moodComparison.total}} 次</view></view>
+      <view class="summary-copy"><view class="card-heading" role="heading" aria-level="2">前后心情变化</view></view>
     </view>
-    <view class="result-detail">按原计划所在周回看，只比较同一次实际运动中完整填写的前后心情，免考核运动也可参与。</view>
-    <view wx:if="{{!moodComparison.total}}" class="result-none" role="status">本周暂无完整的前后心情样本。</view>
+    <view wx:if="{{!moodComparison.total}}" class="result-none" role="status">暂无可对比的心情记录</view>
     <view wx:else class="mood-comparison">
       <view class="result-plan"><view class="result-heading"><text class="result-activity">改善</text><text class="result-count">{{moodComparison.improved}} 次</text></view></view>
       <view class="result-plan"><view class="result-heading"><text class="result-activity">相同</text><text class="result-count">{{moodComparison.same}} 次</text></view></view>
       <view class="result-plan"><view class="result-heading"><text class="result-activity">下降</text><text class="result-count">{{moodComparison.declined}} 次</text></view></view>
     </view>
-    <view class="result-detail">心情统计来自已保存的运动记录。</view>
     <button class="mood-notes-toggle" bindtap="toggleMoodNotes" hover-class="back-pressed" aria-expanded="{{moodNotesExpanded}}" aria-controls="mood-notes" aria-label="{{moodNotesExpanded ? '收起当时写的话' : '展开当时写的话，查看运动前后的文字'}}">
       <text>{{moodNotesExpanded ? '收起当时写的话' : '看看当时写的话'}}</text><view class="notes-chevron {{moodNotesExpanded ? 'is-expanded' : ''}}" aria-hidden="true"></view>
     </button>
     <view wx:if="{{moodNotesExpanded}}" id="mood-notes" class="mood-notes">
-      <view class="notes-caption">按原计划所在周回看，补做备注显示实际日期和运动。原话来自已保存的备注。</view>
-      <view wx:if="{{!moodNotes.length}}" class="result-none" role="status">本周还没有写下备注。</view>
+      <view wx:if="{{!moodNotes.length}}" class="result-none" role="status">暂无备注</view>
       <view wx:for="{{moodNotes}}" wx:key="id" class="mood-note-entry">
         <view class="note-entry-heading"><text class="note-activity">{{item.activity}}</text><text class="note-date">{{item.date}}</text></view>
         <view class="result-detail">{{item.context}}</view>

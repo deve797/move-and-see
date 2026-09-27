@@ -6,8 +6,9 @@ const vm = require('node:vm');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 
+let now = '2026-09-26T04:00:00Z';
 class FixedDate extends Date {
-  constructor(...args) { super(...(args.length ? args : ['2026-09-26T04:00:00Z'])); }
+  constructor(...args) { super(...(args.length ? args : [now])); }
 }
 const app = { globalData: { plans: [
   { id: 1, date: '2026-09-26', activity: '跑步', startTime: '19:00', beforeMood: 'low', beforeMoodNote: '运动前有点累。' },
@@ -92,7 +93,7 @@ record.startReplacement();
 select(record, 5);
 (await record.confirmReplacement());
 const result = app.globalData.plans[0].result;
-assert.deepEqual(plain(result), { status: 'replacement', actualActivity: '散步' });
+assert.deepEqual(plain(result), { status: 'replacement', actualActivity: '散步', actualDate: '2026-09-26' });
 const { result: ignoredResult, version, ...remainingPlan } = app.globalData.plans[0];
 assert.deepEqual(remainingPlan, originalPlan); // 原项目、日期、时间和运动前感受不变。
 assert.equal(JSON.stringify(app.globalData.plans.slice(1)), others);
@@ -124,7 +125,7 @@ reopened.startCorrection();
 const mood = (await mount('mood', { planId: '1' }));
 assert.equal(mood.data.plan, null);
 (await mood.confirmMood());
-assert.deepEqual(plain(result), { status: 'replacement', actualActivity: '散步' });
+assert.deepEqual(plain(result), { status: 'replacement', actualActivity: '散步', actualDate: '2026-09-26' });
 assert.equal(app.globalData.plans[0].result, result); // 旧确认和附属入口不能改写替代结果。
 
 (await today.onShow());
@@ -147,6 +148,10 @@ assert.equal(week.data.adding, false);
 assert.equal(snapshot(), confirmed);
 week.showNextWeek();
 const selectedWeek = week.data.selectedDate;
+const futureRecord = await mount('record', { planId: '3' });
+futureRecord.startReplacement();
+assert.equal(futureRecord.data.recordingReplacement, false);
+now = '2026-09-28T04:00:00Z'; // 到安排当天后才能记录替代完成。
 const nextWeek = (await mount('record', { planId: '3' }));
 nextWeek.startReplacement();
 select(nextWeek, 5);
@@ -155,6 +160,7 @@ select(nextWeek, 5);
 assert.equal(week.data.selectedDate, selectedWeek);
 assert.equal(week.data.days.flatMap(day => day.plans).find(item => item.id === 3).result.actualActivity, '散步');
 
+now = '2026-09-26T04:00:00Z';
 for (const planId of ['1', '3', '4', '5', '6', '999', 'invalid', '', undefined]) {
   const before = snapshot();
   const invalid = (await mount('record', { planId }));
@@ -185,7 +191,7 @@ const second = (await mount('record', { planId: '2' }));
 second.startReplacement();
 select(second, 0);
 (await second.confirmReplacement());
-assert.deepEqual(plain(app.globalData.plans[1].result), { status: 'replacement', actualActivity: '瑜伽' });
+assert.deepEqual(plain(app.globalData.plans[1].result), { status: 'replacement', actualActivity: '瑜伽', actualDate: '2026-09-26' });
 assert.equal(app.globalData.plans[0].result, result);
 assert.equal(app.globalData.plans[0].result.actualActivity, '散步');
 assert.equal(JSON.stringify(app.globalData.plans.slice(4)), JSON.stringify(JSON.parse(original).slice(4)));

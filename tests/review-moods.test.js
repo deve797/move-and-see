@@ -63,6 +63,7 @@ async function correct(page, status) {
   page.startCorrection();
   page.selectCorrectionStatus(event('status', status));
   if (status === 'incomplete') page.selectCorrectionReason(event('reason', '加班'));
+  if (status === 'completed') page.selectActualDate({ detail: { value: page.data.plan.date } });
   (await page.confirmCorrection());
 }
 
@@ -79,7 +80,9 @@ for (const example of examples) {
   const previous = plain(review.data.moodComparison);
   (await beforeMood(app, example.id, example.before));
   (await check(review, app, previous)); // 只有运动前心情且尚未运动，不计样本。
-  (await (await mount('record', app, { planId: String(example.id) })).confirmCompleted());
+  const record = await mount('record', app, { planId: String(example.id) });
+  record.selectActualDate({ detail: { value: record.data.plan.date } });
+  await record.confirmCompleted();
   (await check(review, app, previous)); // 已完成但缺运动后心情仍不计样本。
   (await afterMood(app, example.id, example.after));
   (await check(review, app, example.expected));

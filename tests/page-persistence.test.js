@@ -83,9 +83,11 @@ test('failed completion keeps entered running data and does not create a result'
   assert.deepEqual(app.globalData.plans, original);
   assert.equal(record.data.completed, false);
   assert.equal(record.data.runningData.durationMinutes, '30');
+  assert.equal(record.data.actualDate, '2026-09-26');
   assert.match(record.data.saveError, /网络/);
   await record.confirmCompleted();
   assert.equal(app.globalData.plans[0].result.status, 'completed');
+  assert.equal(app.globalData.plans[0].result.actualDate, '2026-09-26');
   assert.equal(app.globalData.plans[0].result.runningData.distanceKm, '5');
   assert.equal(app.globalData.plans[0].version, 2);
 });

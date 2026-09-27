@@ -59,6 +59,7 @@ const selectedWeek = week.data.selectedDate;
 const previousWeekRecord = (await mount('record', app, { planId: '9' }));
 assert.equal(previousWeekRecord.data.plan.id, 9);
 assert.equal(previousWeekRecord.data.plan.date, '2026-09-20');
+previousWeekRecord.selectActualDate({ detail: { value: '2026-09-20' } });
 (await previousWeekRecord.confirmCompleted());
 (await week.onShow());
 assert.equal(week.data.selectedDate, selectedWeek); // 记录后返回仍在原周。
@@ -76,6 +77,7 @@ assert.equal(record.data.plan.date, '2026-09-25');
 assert.equal(record.data.plan.startTime, '19:00');
 (await week.onShow());
 assert.equal(shown(1).pendingRecord, true); // 只打开、未确认，不清除待补。
+record.selectActualDate({ detail: { value: '2026-09-25' } });
 (await record.confirmCompleted());
 (await week.onShow());
 assert.equal(shown(1).pendingRecord, false);

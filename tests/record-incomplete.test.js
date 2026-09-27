@@ -6,8 +6,9 @@ const vm = require('node:vm');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 
+let now = '2026-09-26T04:00:00Z';
 class FixedDate extends Date {
-  constructor(...args) { super(...(args.length ? args : ['2026-09-26T04:00:00Z'])); }
+  constructor(...args) { super(...(args.length ? args : [now])); }
 }
 const app = { globalData: { plans: [
   { id: 1, date: '2026-09-26', activity: '跑步', startTime: '19:00' },
@@ -119,6 +120,7 @@ for (const planId of ['4', '999', 'invalid', '']) {
   (await invalid.confirmIncomplete());
   assert.equal(JSON.stringify(app.globalData.plans), before);
 }
+now = '2026-09-27T04:00:00Z'; // 到安排当天再测试保存时的取消保护。
 const stale = (await mount('record', { planId: '3' }));
 stale.startIncomplete();
 select(stale, '加班');

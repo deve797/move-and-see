@@ -269,7 +269,7 @@ test('begun or completed schedules cannot be edited or cancelled', async () => {
   const begun = ok(await f.save(plan({ startTime: '07:00' })));
   error(await f.save({ ...begun, startTime: '20:00' }), 'INVALID_TRANSITION');
   error(await f.save({ ...begun, cancelled: true }), 'INVALID_TRANSITION');
-  const completed = ok(await f.save({ ...begun, result: { status: 'completed' } }));
+  const completed = ok(await f.save({ ...begun, result: { status: 'completed', actualDate: begun.date } }));
   error(await f.save({ ...completed, result: undefined }), 'INVALID_TRANSITION');
   error(await f.save({ ...completed, cancelled: true }), 'INVALID_TRANSITION');
 });
@@ -307,7 +307,7 @@ test('concurrent stale writes yield one success and failed transactions leave no
 test('running blanks, zeros, optional feelings and results survive round trips', async () => {
   const f = fixture();
   const saved = ok(await f.save(plan({ beforeMood: 'neutral', beforeMoodNote: '' })));
-  const completed = ok(await f.save({ ...saved, result: { status: 'completed', runningData: { durationMinutes: '30.5', distanceKm: '0', heartRate: '' }, afterMood: 'good', feeling: '' } }));
+  const completed = ok(await f.save({ ...saved, result: { status: 'completed', actualDate: saved.date, runningData: { durationMinutes: '30.5', distanceKm: '0', heartRate: '' }, afterMood: 'good', feeling: '' } }));
   assert.deepEqual(completed.result.runningData, { durationMinutes: '30.5', distanceKm: '0', heartRate: '' });
   const list = ok(await f.list()).items;
   assert.deepEqual(list[0], completed);
@@ -315,6 +315,134 @@ test('running blanks, zeros, optional feelings and results survive round trips',
   assert.deepEqual(corrected.result, { status: 'incomplete', reason: '加班' });
   assert.equal(corrected.beforeMood, 'neutral');
   error(await f.save({ ...corrected, result: { status: 'replacement', actualActivity: '散步' } }), 'INVALID_TRANSITION');
+});
+
+for (const status of ['completed', 'replacement']) {
+  test(status + ' requires a valid actual date within the plan-to-today interval', async () => {
+    const f = fixture();
+    const saved = ok(await f.save(plan({ date: '2026-09-20' })));
+    const result = status === 'replacement' ? { status, actualActivity: '散步' } : { status };
+    error(await f.save({ ...saved, result }), 'INVALID_TRANSITION');
+    for (const actualDate of ['', null, 20260926, {}, '2026-9-26', '2026-02-30']) {
+      error(await f.save({ ...saved, result: { ...result, actualDate } }), 'INVALID_ARGUMENT');
+    }
+    for (const actualDate of ['2026-09-19', '2026-09-27']) {
+      error(await f.save({ ...saved, result: { ...result, actualDate } }), 'INVALID_TRANSITION');
+    }
+    assert.deepEqual(ok(await f.list()).items, [saved], 'invalid dates never change the plan');
+    const completed = ok(await f.save({ ...saved, result: { ...result, actualDate: '2026-09-26' } }));
+    assert.deepEqual(completed.result, { ...result, actualDate: '2026-09-26' });
+    assert.equal(completed.date, '2026-09-20');
+    assert.equal(completed.startTime, '18:00');
+    assert.equal(completed.result.reason, undefined);
+    assert.equal(completed.result.makeup, undefined);
+    assert.deepEqual(ok(await f.list()).items, [completed]);
+  });
+}
+
+test('future dates reject all new results until Beijing midnight and allow same-day early completion', async () => {
+  for (const result of [
+    { status: 'completed', actualDate: '2026-09-27' },
+    { status: 'replacement', actualActivity: '散步', actualDate: '2026-09-27' },
+    { status: 'incomplete', reason: '加班' }
+  ]) {
+    const f = fixture();
+    f.state.now = new Date('2026-09-26T15:59:59.999Z');
+    const saved = ok(await f.save(plan({ date: '2026-09-27', startTime: '23:50' })));
+    error(await f.save({ ...saved, result }), 'INVALID_TRANSITION');
+    assert.deepEqual(ok(await f.list()).items, [saved]);
+    f.state.now = new Date('2026-09-26T16:00:00.000Z');
+    const completed = ok(await f.save({ ...saved, result }));
+    assert.deepEqual(completed.result, result);
+    assert.equal(completed.startTime, '23:50', 'the scheduled time does not block a same-day result');
+  }
+});
+
+test('changing incomplete to completed requires an explicit date while incomplete cannot carry actualDate', async () => {
+  const f = fixture();
+  const saved = ok(await f.save(plan({ date: '2026-09-20', beforeMood: 'neutral', beforeMoodNote: '原计划备注' })));
+  error(await f.save({ ...saved, result: { status: 'incomplete', reason: '加班', actualDate: '2026-09-20' } }), 'INVALID_ARGUMENT');
+  const missed = ok(await f.save({ ...saved, result: { status: 'incomplete', reason: '加班' } }));
+  error(await f.save({ ...missed, result: { status: 'completed' } }), 'INVALID_TRANSITION');
+  const completed = ok(await f.save({ ...missed, result: { status: 'completed', actualDate: '2026-09-20' } }));
+  assert.deepEqual(completed.result, { status: 'completed', actualDate: '2026-09-20' });
+  assert.equal(completed.beforeMood, 'neutral');
+  assert.equal(completed.beforeMoodNote, '原计划备注');
+  const corrected = ok(await f.save({ ...completed, result: { status: 'incomplete', reason: '下雨' } }));
+  assert.deepEqual(corrected.result, { status: 'incomplete', reason: '下雨' });
+});
+
+test('legacy completed and replacement results preserve unknown actual dates without migration', async () => {
+  for (const result of [
+    { status: 'completed', afterMood: 'good', runningData: { durationMinutes: '30', distanceKm: '5', heartRate: '' } },
+    { status: 'replacement', actualActivity: '散步' }
+  ]) {
+    const f = fixture();
+    const legacy = { ...plan({ date: '2026-09-20' }), result, version: 4, createdAt: '2026-09-20T04:00:00.000Z', updatedAt: '2026-09-20T05:00:00.000Z', _owner: 'owner-one', _kind: 'record' };
+    f.db.seed('plans', documentId('owner-one', legacy.id), legacy);
+    const listed = ok(await f.list()).items[0];
+    assert.deepEqual(listed.result, result);
+    const saved = ok(await f.save({ ...listed, beforeMoodNote: '补充原计划备注' }));
+    assert.deepEqual(saved.result, result);
+    assert.equal(saved.createdAt, legacy.createdAt);
+    assert.equal(saved.version, 5);
+    if (result.status === 'completed') {
+      const felt = ok(await f.save({ ...saved, result: { ...saved.result, feeling: '轻松' } }));
+      assert.deepEqual(felt.result, { ...result, feeling: '轻松' });
+      assert.equal(felt.result.actualDate, undefined);
+      const dated = ok(await f.save({ ...felt, result: { ...felt.result, actualDate: '2026-09-21' } }));
+      assert.equal(dated.result.actualDate, '2026-09-21');
+    } else {
+      error(await f.save({ ...saved, result: { ...saved.result, actualDate: '2026-09-21' } }), 'INVALID_TRANSITION');
+    }
+  }
+});
+
+test('legacy future results stay unchanged while new result transitions remain blocked', async () => {
+  const f = fixture();
+  const legacy = { ...plan({ date: '2026-09-27' }), result: { status: 'completed' }, version: 2, _owner: 'owner-one', _kind: 'record' };
+  f.db.seed('plans', documentId('owner-one', legacy.id), legacy);
+  const listed = ok(await f.list()).items[0];
+  const felt = ok(await f.save({ ...listed, result: { ...listed.result, afterMood: 'good' } }));
+  assert.deepEqual(felt.result, { status: 'completed', afterMood: 'good' });
+  error(await f.save({ ...felt, result: { status: 'incomplete', reason: '加班' } }), 'INVALID_TRANSITION');
+  error(await f.save({ ...felt, result: { ...felt.result, actualDate: '2026-09-27' } }), 'INVALID_TRANSITION');
+});
+
+test('actual-date corrections preserve other data and retain version, receipt and rollback guarantees', async () => {
+  const f = fixture();
+  const saved = ok(await f.save(plan({ date: '2026-09-20', beforeMood: 'neutral', beforeMoodNote: '原计划备注' })));
+  const result = { status: 'completed', actualDate: '2026-09-23', afterMood: 'good', afterMoodNote: '运动后备注', feeling: '轻松', runningData: { durationMinutes: '30.5', distanceKm: '0', heartRate: '' } };
+  const event = { action: 'savePlan', plan: { ...saved, result }, expectedVersion: saved.version, requestId: 'completed-once' };
+  const completed = ok(await f.api(event));
+  assert.deepEqual(ok(await f.api(event)), completed);
+  error(await f.api({ ...event, plan: { ...event.plan, result: { ...result, actualDate: '2026-09-24' } } }), 'REQUEST_CONFLICT');
+  for (const actualDate of [undefined, '2026-09-19', '2026-09-27']) {
+    error(await f.save({ ...completed, result: { ...result, actualDate } }), 'INVALID_TRANSITION');
+  }
+  const corrected = ok(await f.save({ ...completed, result: { ...result, actualDate: '2026-09-24' } }));
+  assert.deepEqual(corrected.result, { ...result, actualDate: '2026-09-24' });
+  assert.equal(corrected.version, 3);
+  assert.equal(corrected.createdAt, saved.createdAt);
+  assert.equal(corrected.date, saved.date);
+  assert.equal(corrected.startTime, saved.startTime);
+  assert.equal(corrected.beforeMoodNote, saved.beforeMoodNote);
+  assert.deepEqual(ok(await f.api(event)), corrected, 'replaying an old receipt returns the current record');
+  error(await f.save({ ...completed, result: { ...result, actualDate: '2026-09-25' } }), 'VERSION_CONFLICT');
+  f.db.failReceiptWrite(true);
+  error(await f.save({ ...corrected, result: { ...result, actualDate: '2026-09-25' } }), 'INTERNAL_ERROR');
+  assert.deepEqual(ok(await f.list()).items, [corrected]);
+});
+
+test('replacement actual dates remain immutable along with the existing result', async () => {
+  const f = fixture();
+  const saved = ok(await f.save(plan({ date: '2026-09-20' })));
+  const replaced = ok(await f.save({ ...saved, result: { status: 'replacement', actualActivity: '散步', actualDate: '2026-09-23' } }));
+  for (const actualDate of [undefined, '2026-09-24']) {
+    error(await f.save({ ...replaced, result: { ...replaced.result, actualDate } }), 'INVALID_TRANSITION');
+  }
+  const annotated = ok(await f.save({ ...replaced, beforeMoodNote: '原计划备注' }));
+  assert.deepEqual(annotated.result, replaced.result);
 });
 
 test('makeup preserves original failure, accepts cross-week date and protects immutable makeup', async () => {
@@ -330,6 +458,10 @@ test('makeup preserves original failure, accepts cross-week date and protects im
   error(await f.save({ ...madeUp, result: { status: 'completed' } }), 'INVALID_TRANSITION');
   error(await f.save({ ...madeUp, result: { ...madeUp.result, makeup: { date: '2026-09-25', actualActivity: '散步' } } }), 'INVALID_TRANSITION');
   ok(await f.save({ ...madeUp, result: { ...madeUp.result, makeup: { ...madeUp.result.makeup, afterMood: 'great', feeling: '适中' } } }));
+  const sameDay = ok(await f.save(plan({ id: 'same-day-makeup' })));
+  const sameDayMissed = ok(await f.save({ ...sameDay, result: { status: 'incomplete', reason: '临时有事' } }));
+  const sameDayMakeup = ok(await f.save({ ...sameDayMissed, result: { ...sameDayMissed.result, makeup: { date: sameDay.date, actualActivity: '散步' } } }));
+  assert.deepEqual(sameDayMakeup.result, { status: 'incomplete', reason: '临时有事', makeup: { date: '2026-09-26', actualActivity: '散步' } });
 });
 
 test('day changes preserve optional walks and use Beijing midnight on the server', async () => {
@@ -352,8 +484,8 @@ test('day version guards every plan mutation and period corrections allow a miss
   const f = fixture();
   const saved = ok(await f.save(plan()));
   const day = ok(await f.day({ date: saved.date, periodMarked: true }));
-  error(await f.save({ ...saved, result: { status: 'completed' } }), 'DAY_VERSION_CONFLICT');
-  const completed = ok(await f.save({ ...saved, result: { status: 'completed' } }, { expectedDayVersion: day.version }));
+  error(await f.save({ ...saved, result: { status: 'completed', actualDate: saved.date } }), 'DAY_VERSION_CONFLICT');
+  const completed = ok(await f.save({ ...saved, result: { status: 'completed', actualDate: saved.date } }, { expectedDayVersion: day.version }));
   const missed = ok(await f.save({ ...completed, result: { status: 'incomplete', reason: '' } }, { expectedDayVersion: day.version }));
   const unmarked = ok(await f.day({ ...day, periodMarked: false }));
   error(await f.save({ ...missed, beforeMood: 'good' }, { expectedDayVersion: day.version }), 'DAY_VERSION_CONFLICT');

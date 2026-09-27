@@ -6,11 +6,15 @@ const vm = require('node:vm');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 
+class FixedDate extends Date {
+  constructor(...args) { super(...(args.length ? args : ['2026-09-26T04:00:00Z'])); }
+}
+
 async function mount(app, planId) {
   const file = path.resolve(__dirname, '../miniprogram/pages/record/index.js');
   let definition;
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), {
-    require: createRequire(file), getApp: () => prepareTestApp(app), Page(value) { definition = value; },
+    require: createRequire(file), Date: FixedDate, getApp: () => prepareTestApp(app), Page(value) { definition = value; },
     wx: { showToast() {}, pageScrollTo() {}, showToast() {} }
   });
   const page = Object.assign({}, definition, {

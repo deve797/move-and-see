@@ -1,4 +1,5 @@
 const moods = require('../../utils/mood-options');
+const { actualExerciseDate } = require('../../utils/exercise-result');
 
 Page({
   onShareAppMessage: require('../../utils/share'),
@@ -54,7 +55,7 @@ Page({
     const result = plan ? (isMakeup ? plan.result.makeup : plan.result) : null;
     const option = result && moods.find(item => item.value === result.afterMood);
     this.setData({
-      plan: plan ? { id: plan.id, activity: isMakeup ? result.actualActivity : plan.activity, date: isMakeup ? result.date : plan.date, startTime: isMakeup ? '' : plan.startTime } : null,
+      plan: plan ? { id: plan.id, activity: isMakeup ? result.actualActivity : plan.activity, date: actualExerciseDate(plan) || plan.date, startTime: isMakeup || actualExerciseDate(plan) ? '' : plan.startTime } : null,
       selectedMood: option ? option.value : '',
       note: result ? result.afterMoodNote || '' : '',
       noteFocused: false, saveError: '', saveConflict: false

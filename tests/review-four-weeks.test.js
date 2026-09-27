@@ -88,11 +88,13 @@ progress(weeks[2], 1, 3, 33);
 progress(weeks[3], 0, 4, 0);
 
 const completed = (await mount('record', app, 1));
+completed.selectActualDate({ detail: { value: completed.data.plan.date } });
 (await completed.confirmCompleted());
 progress((await refresh(review, today, app))[3], 1, 4, 25);
 const replacement = (await mount('record', app, 2));
 replacement.startReplacement();
 replacement.selectReplacementActivity({ detail: { value: '5' } });
+replacement.selectActualDate({ detail: { value: replacement.data.plan.date } });
 (await replacement.confirmReplacement());
 progress((await refresh(review, today, app))[3], 2, 4, 50);
 const incomplete = (await mount('record', app, 3));
@@ -107,6 +109,7 @@ completed.selectCorrectionReason(event('reason', '加班'));
 progress((await refresh(review, today, app))[3], 1, 4, 25);
 completed.startCorrection();
 completed.selectCorrectionStatus(event('status', 'completed'));
+completed.selectActualDate({ detail: { value: completed.data.plan.date } });
 (await completed.confirmCorrection());
 progress((await refresh(review, today, app))[3], 2, 4, 50);
 
