@@ -18,6 +18,7 @@ exports.main = (event, context) => {
   }
   return createApi({
     db,
+    files: cloud,
     getIdentity: () => identity,
     now: () => new Date()
   })(event);

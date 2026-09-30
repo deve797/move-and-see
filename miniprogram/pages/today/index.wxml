@@ -66,6 +66,7 @@
   </view>
   <navigator class="review-entry" url="/pages/review/index" hover-class="calendar-pressed" aria-label="查看本周回看"><text>本周回看</text><view class="review-chevron" aria-hidden="true"></view></navigator>
   </block>
+  <navigator class="profile-entry" url="/pages/profile/index" hover-class="calendar-pressed"><text>我的</text><view class="review-chevron" aria-hidden="true"></view></navigator>
   <view class="share-entry">
     <button class="share-button" open-type="share" hover-class="share-pressed">分享小程序</button>
   </view>

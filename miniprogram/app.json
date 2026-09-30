@@ -5,7 +5,8 @@
     "pages/week/index",
     "pages/record/index",
     "pages/mood/index",
-    "pages/review/index"
+    "pages/review/index",
+    "pages/profile/index"
   ],
   "window": {
     "navigationBarTitleText": "",

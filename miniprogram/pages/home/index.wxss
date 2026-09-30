@@ -7,7 +7,10 @@
 }
 .intro { margin-top: 35px; flex-shrink: 0; }
 .home-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
-.home-header .brand { align-self: center; }
+.home-header .brand { align-self: center; flex-shrink: 0; }
+.home-links { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.home-links .share-button { width: auto; margin: 0; flex-shrink: 0; padding: 8px 0; background: transparent; color: #50584d; font-size: 14px; line-height: 1.5; }
+.profile-link { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; color: #50584d; font-size: 14px; line-height: 1.5; }
 .headline { font-size: 80rpx; font-weight: 700; line-height: 1.3; letter-spacing: -1px; }
 .scene { position: relative; flex: 1; min-height: 440px; margin: 10px -48rpx 0; }
 .scene-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
@@ -18,6 +21,7 @@
 @media (max-width: 340px) {
   .home { padding-top: 8px; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
   .intro { margin-top: 27px; }
+  .home-header, .home-links { gap: 4px; }
   .scene { min-height: 375px; }
   .home .today-button { width: 100px; height: 100px; font-size: 20px; }
 }

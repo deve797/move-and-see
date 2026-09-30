@@ -1,7 +1,10 @@
 <view class="home">
   <view class="home-header">
     <view class="brand serif">Move&See</view>
-    <button class="share-button" open-type="share" hover-class="share-pressed">分享小程序</button>
+    <view class="home-links">
+      <navigator class="profile-link" url="/pages/profile/index" hover-class="share-pressed">我的</navigator>
+      <button class="share-button" open-type="share" hover-class="share-pressed">分享小程序</button>
+    </view>
   </view>
   <view class="intro">
     <view class="headline serif" role="heading" aria-level="1">今天想怎么动？</view>

@@ -1,0 +1,54 @@
+<view class="profile-page">
+  <view class="brand serif">Move&See</view>
+  <view class="profile-title serif" role="heading" aria-level="1">我的</view>
+  <view wx:if="{{loading}}" class="profile-message" role="status">正在读取资料…</view>
+  <view wx:elif="{{loadError}}" class="profile-message" role="alert">
+    <text>{{loadError}}</text>
+    <button class="text-button" bindtap="retryLoad" hover-class="share-pressed">重新读取</button>
+  </view>
+  <block wx:elif="{{profile}}">
+    <block wx:if="{{!editing}}">
+      <view class="profile-summary">
+        <view class="avatar" aria-label="头像">
+          <image wx:if="{{profile.avatarUrl && !avatarFailed}}" class="avatar-image" src="{{profile.avatarUrl}}" mode="aspectFill" binderror="onAvatarError" />
+          <view wx:else class="avatar-placeholder" aria-hidden="true"><view class="avatar-head"></view><view class="avatar-shoulders"></view></view>
+        </view>
+        <view class="profile-nickname {{profile.nickname ? '' : 'nickname-unset'}}">{{profile.nickname || '昵称未设置'}}</view>
+      </view>
+      <view wx:if="{{profile.avatarUnavailable || avatarFailed}}" class="profile-message" role="status">
+        <text>头像暂未加载</text>
+        <button class="text-button" bindtap="retryLoad" hover-class="share-pressed">重新加载头像</button>
+      </view>
+      <button class="edit-button" bindtap="startEditing" hover-class="profile-pressed">编辑资料<view class="profile-chevron" aria-hidden="true"></view></button>
+    </block>
+    <form wx:else class="profile-form" bindsubmit="submitProfile">
+      <view class="avatar-field">
+        <view class="field-label">头像<text class="optional-label">（选填）</text></view>
+        <button class="avatar-choice" open-type="chooseAvatar" bindchooseavatar="chooseAvatar" disabled="{{saving || avatarReading}}" hover-class="profile-pressed" aria-label="选择头像">
+          <view class="avatar">
+            <image wx:if="{{draftAvatarUrl && !avatarFailed}}" class="avatar-image" src="{{draftAvatarUrl}}" mode="aspectFill" binderror="onAvatarError" />
+            <view wx:else class="avatar-placeholder" aria-hidden="true"><view class="avatar-head"></view><view class="avatar-shoulders"></view></view>
+          </view>
+          <text class="avatar-choice-label">{{avatarReading ? '正在读取…' : '选择头像'}}</text>
+          <view class="profile-chevron" aria-hidden="true"></view>
+        </button>
+        <view wx:if="{{avatarError}}" class="field-error" role="alert">{{avatarError}}</view>
+      </view>
+      <view class="nickname-field">
+        <label class="field-label" for="nickname">昵称</label>
+        <view class="nickname-input-wrap {{nicknameFocused ? 'input-focused' : ''}}">
+          <input id="nickname" name="nickname" class="nickname-input" type="nickname" value="{{draftNickname}}" maxlength="40" placeholder="填写昵称" placeholder-class="nickname-placeholder" disabled="{{saving}}" bindinput="inputNickname" bindfocus="focusNickname" bindblur="blurNickname" bindnicknamereview="onNicknameReview" cursor-spacing="24" aria-label="昵称，1至20个字" />
+          <text class="nickname-count {{nicknameCount > 20 ? 'field-error' : ''}}">{{nicknameCount}}/20</text>
+        </view>
+        <view wx:if="{{nicknameCount > 20}}" class="field-error" role="alert">昵称最多 20 个字</view>
+        <view wx:elif="{{nicknameError}}" class="field-error" role="alert">{{nicknameError}}</view>
+      </view>
+      <view wx:if="{{saveError}}" class="profile-message" role="alert">{{saveError}}</view>
+      <button wx:if="{{saveConflict}}" class="text-button conflict-button" bindtap="reloadAfterConflict" disabled="{{saving || avatarReading}}" hover-class="share-pressed">放弃填写并重新读取</button>
+      <view class="profile-actions">
+        <button class="save-button primary-button" form-type="submit" disabled="{{!canSave || saving || avatarReading || saveConflict}}" hover-class="button-pressed">{{saving ? '正在保存…' : '保存资料'}}</button>
+        <button class="cancel-button text-button" bindtap="cancelEditing" disabled="{{saving || avatarReading}}" hover-class="share-pressed">取消</button>
+      </view>
+    </form>
+  </block>
+</view>

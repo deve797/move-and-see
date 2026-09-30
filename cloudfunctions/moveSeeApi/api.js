@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { ApiError, ensure, identifier, planFields, dayFields, checkPlan, checkDay, stable } = require('./validation');
+const { profileAction } = require('./profile');
 const APPID = 'wx2c23ae79d174802d';
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const documentId = (owner, id) => 'd_' + hash(owner + '\n' + id);
@@ -7,7 +8,7 @@ function publicRecord(document) {
   const { _id, _owner, _kind, ...record } = document;
   return record;
 }
-function createApi({ db, getIdentity, now, logError = value => console.error(JSON.stringify(value)) }) {
+function createApi({ db, getIdentity, now, files, logError = value => console.error(JSON.stringify(value)) }) {
   return async event => {
     try {
       const identity = getIdentity() || {};
@@ -16,6 +17,9 @@ function createApi({ db, getIdentity, now, logError = value => console.error(JSO
       ensure(event && typeof event === 'object' && !Array.isArray(event));
       if (event.action === 'whoami') return { ok: true, data: { openid: identity.OPENID, appid: identity.APPID } };
       const owner = identity.OPENID;
+      if (['getProfile', 'saveProfile'].includes(event.action)) {
+        return { ok: true, data: await profileAction({ event, owner, db, files, now, logError }) };
+      }
       if (event.action === 'list') {
         ensure(['plans', 'day_marks'].includes(event.collection));
         ensure(event.cursor === undefined || event.cursor === '' || /^d_[a-f0-9]{64}$/.test(event.cursor));
